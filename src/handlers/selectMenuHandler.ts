@@ -1,4 +1,4 @@
-import { StringSelectMenuInteraction, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { StringSelectMenuInteraction, ChannelType, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { dataManager } from '../models/DataManager';
 import { createTicketEmbed, getTicketButtons } from '../utils/ticketEmbed';
 
@@ -9,7 +9,7 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
   if (!settings.categoryId) {
     await interaction.reply({ 
       content: 'Ticket category has not been configured.', 
-      ephemeral: true 
+      flags: [MessageFlags.Ephemeral] 
     });
     return;
   }
@@ -20,12 +20,12 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
   if (!category || category.type !== ChannelType.GuildCategory) {
     await interaction.reply({ 
       content: 'Invalid ticket category.', 
-      ephemeral: true 
+      flags: [MessageFlags.Ephemeral] 
     });
     return;
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
   const channelName = `ticket-${interaction.user.username}-${Date.now().toString().slice(-4)}`;
   

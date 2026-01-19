@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder } from 'discord.js';
+import { SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 
 export default {
@@ -38,12 +38,12 @@ export default {
 
     if (view === 'yes') {
       const permissionsList = `
-**Current Ticket Permissions:**
-━━━━━━━━━━━━━━━━━━
-• User Can Close: ${settings.userCanClose ? '✅ Enabled' : '❌ Disabled'}
-`;
+ **Current Ticket Permissions:**
+ ━━━━━━━━━━━━━━━━━━
+ • User Can Close: ${settings.userCanClose ? '✅ Enabled' : '❌ Disabled'}
+ `;
 
-      await interaction.reply({ content: permissionsList, ephemeral: true });
+      await interaction.reply({ content: permissionsList, flags: [MessageFlags.Ephemeral] });
       return;
     }
 
@@ -56,7 +56,7 @@ export default {
       
       await interaction.reply({ 
         content: `User can close tickets has been **${newValue ? 'enabled' : 'disabled'}**.`, 
-        ephemeral: true 
+        flags: [MessageFlags.Ephemeral] 
       });
     }
   }

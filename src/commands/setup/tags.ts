@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder } from 'discord.js';
+import { SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 
 export default {
@@ -39,44 +39,44 @@ export default {
 
     if (list === 'yes') {
       if (settings.tags.length === 0) {
-        await interaction.reply({ content: 'No tags configured.', ephemeral: true });
+        await interaction.reply({ content: 'No tags configured.', flags: [MessageFlags.Ephemeral] });
         return;
       }
       
       const tagList = settings.tags.map((t, i) => `${i + 1}. ${t}`).join('\n');
-      await interaction.reply({ content: `Current tags:\n${tagList}`, ephemeral: true });
+      await interaction.reply({ content: `Current tags:\n${tagList}`, flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (action === 'clear') {
       dataManager.updateSettings({ tags: [] });
-      await interaction.reply({ content: 'All tags have been cleared.', ephemeral: true });
+      await interaction.reply({ content: 'All tags have been cleared.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (!tag) {
-      await interaction.reply({ content: 'Please provide a tag to add or remove.', ephemeral: true });
+      await interaction.reply({ content: 'Please provide a tag to add or remove.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (action === 'add') {
       if (settings.tags.includes(tag)) {
-        await interaction.reply({ content: 'This tag already exists.', ephemeral: true });
+        await interaction.reply({ content: 'This tag already exists.', flags: [MessageFlags.Ephemeral] });
         return;
       }
       
       const newTags = [...settings.tags, tag];
       dataManager.updateSettings({ tags: newTags });
-      await interaction.reply({ content: `Tag "${tag}" has been added.`, ephemeral: true });
+      await interaction.reply({ content: `Tag "${tag}" has been added.`, flags: [MessageFlags.Ephemeral] });
     } else if (action === 'remove') {
       if (!settings.tags.includes(tag)) {
-        await interaction.reply({ content: 'This tag does not exist.', ephemeral: true });
+        await interaction.reply({ content: 'This tag does not exist.', flags: [MessageFlags.Ephemeral] });
         return;
       }
       
       const newTags = settings.tags.filter(t => t !== tag);
       dataManager.updateSettings({ tags: newTags });
-      await interaction.reply({ content: `Tag "${tag}" has been removed.`, ephemeral: true });
+      await interaction.reply({ content: `Tag "${tag}" has been removed.`, flags: [MessageFlags.Ephemeral] });
     }
   }
 };

@@ -1,4 +1,4 @@
-import { ButtonInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
+import { ButtonInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../models/DataManager';
 
 export async function handleCreateTicket(interaction: ButtonInteraction) {
@@ -7,7 +7,7 @@ export async function handleCreateTicket(interaction: ButtonInteraction) {
   if (!settings.categoryId) {
     await interaction.reply({ 
       content: 'Ticket category has not been configured. Please use /setup ticketcategory first.', 
-      ephemeral: true 
+      flags: [MessageFlags.Ephemeral] 
     });
     return;
   }
@@ -15,7 +15,7 @@ export async function handleCreateTicket(interaction: ButtonInteraction) {
   if (settings.tags.length === 0) {
     await interaction.reply({ 
       content: 'No tags have been configured. Please use /setup tags first.', 
-      ephemeral: true 
+      flags: [MessageFlags.Ephemeral] 
     });
     return;
   }
@@ -25,7 +25,7 @@ export async function handleCreateTicket(interaction: ButtonInteraction) {
   if (existingTicket) {
     await interaction.reply({ 
       content: `You already have an open ticket: **<#${existingTicket.channelId}>**`, 
-      ephemeral: true 
+      flags: [MessageFlags.Ephemeral] 
     });
     return;
   }
@@ -47,6 +47,6 @@ export async function handleCreateTicket(interaction: ButtonInteraction) {
   await interaction.reply({
     content: 'Please select a tag for your ticket:',
     components: [row],
-    ephemeral: true
+    flags: [MessageFlags.Ephemeral]
   });
 }

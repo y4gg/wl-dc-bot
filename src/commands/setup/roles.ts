@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder } from 'discord.js';
+import { SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 
 export default {
@@ -42,7 +42,7 @@ export default {
       const roles = type === 'admin' ? settings.adminRoles : settings.supportRoles;
       
       if (roles.length === 0) {
-        await interaction.reply({ content: `No ${roleType.toLowerCase()} roles configured.`, ephemeral: true });
+        await interaction.reply({ content: `No ${roleType.toLowerCase()} roles configured.`, flags: [MessageFlags.Ephemeral] });
         return;
       }
 
@@ -51,12 +51,12 @@ export default {
         return r ? `- ${r.name} (${roleId})` : `- Unknown role (${roleId})`;
       }).join('\n');
 
-      await interaction.reply({ content: `${roleType} roles:\n${roleList}`, ephemeral: true });
+      await interaction.reply({ content: `${roleType} roles:\n${roleList}`, flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (!role) {
-      await interaction.reply({ content: 'Please select a role to add or remove.', ephemeral: true });
+      await interaction.reply({ content: 'Please select a role to add or remove.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
@@ -64,7 +64,7 @@ export default {
 
     if (action === 'add') {
       if (targetArray.includes(role.id)) {
-        await interaction.reply({ content: 'This role is already added.', ephemeral: true });
+        await interaction.reply({ content: 'This role is already added.', flags: [MessageFlags.Ephemeral] });
         return;
       }
 
@@ -76,10 +76,10 @@ export default {
         dataManager.updateSettings({ supportRoles: newArray });
       }
 
-      await interaction.reply({ content: `Role **${role.name}** has been added as ${type}.`, ephemeral: true });
+      await interaction.reply({ content: `Role **${role.name}** has been added as ${type}.`, flags: [MessageFlags.Ephemeral] });
     } else if (action === 'remove') {
       if (!targetArray.includes(role.id)) {
-        await interaction.reply({ content: 'This role is not configured.', ephemeral: true });
+        await interaction.reply({ content: 'This role is not configured.', flags: [MessageFlags.Ephemeral] });
         return;
       }
 
@@ -91,7 +91,7 @@ export default {
         dataManager.updateSettings({ supportRoles: newArray });
       }
 
-      await interaction.reply({ content: `Role **${role.name}** has been removed from ${type}.`, ephemeral: true });
+      await interaction.reply({ content: `Role **${role.name}** has been removed from ${type}.`, flags: [MessageFlags.Ephemeral] });
     }
   }
 };

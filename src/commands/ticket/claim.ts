@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 import { canClaimTicket } from '../../utils/permissionChecks';
 import { updateTicketEmbed } from '../../utils/ticketEmbed';
@@ -13,22 +13,22 @@ export default {
     const ticket = dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
-      await interaction.reply({ content: 'This is not a ticket channel.', ephemeral: true });
+      await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (ticket.status === 'closed') {
-      await interaction.reply({ content: 'This ticket is already closed.', ephemeral: true });
+      await interaction.reply({ content: 'This ticket is already closed.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (!canClaimTicket(interaction)) {
-      await interaction.reply({ content: 'You do not have permission to claim tickets.', ephemeral: true });
+      await interaction.reply({ content: 'You do not have permission to claim tickets.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (ticket.claimedBy === interaction.user.id) {
-      await interaction.reply({ content: 'You have already claimed this ticket.', ephemeral: true });
+      await interaction.reply({ content: 'You have already claimed this ticket.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 

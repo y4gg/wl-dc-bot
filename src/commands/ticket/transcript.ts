@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 import { generateTranscript, saveTranscriptToFile } from '../../utils/transcriptGenerator';
 import { hasAdminOrSupport } from '../../utils/permissionChecks';
@@ -13,12 +13,12 @@ export default {
     const ticket = dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
-      await interaction.reply({ content: 'This is not a ticket channel.', ephemeral: true });
+      await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (!hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: 'You do not have permission to generate transcripts.', ephemeral: true });
+      await interaction.reply({ content: 'You do not have permission to generate transcripts.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
@@ -46,7 +46,7 @@ export default {
       }
     } catch (error) {
       console.error('Failed to generate transcript:', error);
-      await interaction.followUp({ content: 'Failed to generate transcript.', ephemeral: true });
+      await interaction.followUp({ content: 'Failed to generate transcript.', flags: [MessageFlags.Ephemeral] });
     }
   }
 };

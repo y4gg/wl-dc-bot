@@ -1,6 +1,8 @@
-import { Client, GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, REST, Routes, MessageFlags } from 'discord.js';
 import { config } from 'dotenv';
 import { dataManager } from './models/DataManager';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { handleCreateTicket } from './handlers/buttonHandler';
 import { handleTagSelection } from './handlers/selectMenuHandler';
 import { startInactivityCheck } from './handlers/inactivityHandler';
@@ -61,6 +63,11 @@ async function registerCommands() {
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
   
+  const transcriptsDir = join(process.cwd(), 'data', 'transcripts');
+  if (!existsSync(transcriptsDir)) {
+    mkdirSync(transcriptsDir, { recursive: true });
+  }
+  
   await registerCommands();
   startInactivityCheck(client);
 });
@@ -110,9 +117,9 @@ client.on('interactionCreate', async interaction => {
     console.error('Error handling interaction:', error);
     
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: 'An error occurred while processing your request.', ephemeral: true });
+      await interaction.followUp({ content: 'An error occurred while processing your request.', flags: [MessageFlags.Ephemeral] });
     } else {
-      await interaction.reply({ content: 'An error occurred while processing your request.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while processing your request.', flags: [MessageFlags.Ephemeral] });
     }
   }
 });

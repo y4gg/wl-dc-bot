@@ -1,7 +1,7 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 import { canCloseTicket } from '../../utils/permissionChecks';
-import { generateTranscript, saveTranscriptToFile, formatTranscriptAsText } from '../../utils/transcriptGenerator';
+import { generateTranscript, saveTranscriptToFile } from '../../utils/transcriptGenerator';
 
 export default {
   data: new SlashCommandBuilder()
@@ -13,12 +13,12 @@ export default {
     const ticket = dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
-      await interaction.reply({ content: 'This is not a ticket channel.', ephemeral: true });
+      await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (!canCloseTicket(interaction, ticket.userId)) {
-      await interaction.reply({ content: 'You do not have permission to close this ticket.', ephemeral: true });
+      await interaction.reply({ content: 'You do not have permission to close this ticket.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
@@ -26,7 +26,7 @@ export default {
     if (!permissions || !permissions.has('ViewChannel') || !permissions.has('ReadMessageHistory')) {
       await interaction.reply({ 
         content: 'I do not have permission to access this channel. Please contact an administrator.', 
-        ephemeral: true 
+        flags: [MessageFlags.Ephemeral] 
       });
       return;
     }
@@ -69,7 +69,5 @@ export default {
     }
     
     dataManager.deleteTicket(ticket.id);
-
-    await interaction.followUp({ content: 'Ticket closed successfully.', ephemeral: true });
   }
 };

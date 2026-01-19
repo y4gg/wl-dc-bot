@@ -1,6 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import { Transcript } from '../types';
 import { writeFileSync } from 'fs';
+import { cwd } from 'process';
 import { join } from 'path';
 
 export async function generateTranscript(channel: TextChannel, ticketId: string, userId: string): Promise<Transcript> {
@@ -44,7 +45,7 @@ export async function generateTranscript(channel: TextChannel, ticketId: string,
 
 export function saveTranscriptToFile(transcript: Transcript): string {
   const filename = `transcript-${transcript.ticketId}-${Date.now()}.txt`;
-  const filepath = join(__dirname, '../../data/transcripts', filename);
+  const filepath = join(cwd(), 'data/transcripts', filename);
   
   let content = `Ticket Transcript - ${transcript.ticketId}\n`;
   content += `User ID: ${transcript.userId}\n`;

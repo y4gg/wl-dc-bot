@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 import { canManageTicket } from '../../utils/permissionChecks';
 
@@ -17,12 +17,12 @@ export default {
     const ticket = dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
-      await interaction.reply({ content: 'This is not a ticket channel.', ephemeral: true });
+      await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     if (!canManageTicket(interaction, ticket.userId)) {
-      await interaction.reply({ content: 'You do not have permission to rename this ticket.', ephemeral: true });
+      await interaction.reply({ content: 'You do not have permission to rename this ticket.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
@@ -34,7 +34,7 @@ export default {
       await interaction.reply({ content: `Ticket channel has been renamed to **${sanitizedName}**.` });
     } catch (error) {
       console.error('Failed to rename channel:', error);
-      await interaction.reply({ content: 'Failed to rename the ticket channel.', ephemeral: true });
+      await interaction.reply({ content: 'Failed to rename the ticket channel.', flags: [MessageFlags.Ephemeral] });
     }
   }
 };

@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandSubcommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 
 export default {
@@ -16,7 +16,7 @@ export default {
     const settings = dataManager.getSettings();
 
     if (!channel || channel.type !== 0) {
-      await interaction.reply({ content: 'Please select a text channel.', ephemeral: true });
+      await interaction.reply({ content: 'Please select a text channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
@@ -38,6 +38,6 @@ export default {
       messageId: message.id
     });
 
-    await interaction.reply({ content: 'Create Ticket button has been sent!', ephemeral: true });
+    await interaction.reply({ content: 'Create Ticket button has been sent!', flags: [MessageFlags.Ephemeral] });
   }
 };

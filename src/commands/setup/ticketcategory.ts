@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder } from 'discord.js';
+import { SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 
 export default {
@@ -15,11 +15,11 @@ export default {
     const category = interaction.options.getChannel('category');
 
     if (!category || category.type !== 4) {
-      await interaction.reply({ content: 'Please select a category channel.', ephemeral: true });
+      await interaction.reply({ content: 'Please select a category channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
     dataManager.updateSettings({ categoryId: category.id });
-    await interaction.reply({ content: `Ticket category has been set to **${category.name}**.`, ephemeral: true });
+    await interaction.reply({ content: `Ticket category has been set to **${category.name}**.`, flags: [MessageFlags.Ephemeral] });
   }
 };
