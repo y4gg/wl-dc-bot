@@ -1,0 +1,4 @@
+.env
+output.txt
+!data/transcripts/.gitkeep
+data/
