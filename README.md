@@ -133,9 +133,9 @@ Available in ticket channels:
 
 ## Data Storage
 
-Data is stored in two separate files for better security:
+Data is stored in separate files for better security:
 
-- `data/settings.json` - Bot configuration (can be committed to git)
+- `settings.json` - Bot configuration (can be committed to git)
   - Category, channel, and message IDs
   - Ticket tags
   - Admin and support roles

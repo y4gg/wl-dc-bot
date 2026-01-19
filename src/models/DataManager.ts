@@ -1,8 +1,8 @@
-import { BotData, Ticket, TicketSettings } from '../types';
-import { readFileSync, writeFileSync } from 'fs';
+import { Ticket, TicketSettings } from '../types';
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs';
 import { join } from 'path';
 
-const SETTINGS_PATH = join(__dirname, '../../data/settings.json');
+const SETTINGS_PATH = join(process.cwd(), 'settings.json');
 const TICKETS_PATH = join(__dirname, '../../data/tickets.json');
 
 export class DataManager {
@@ -15,22 +15,35 @@ export class DataManager {
   }
 
   private loadSettings(): TicketSettings {
+    const oldSettingsPath = join(__dirname, '../../data/settings.json');
+    const defaultSettings: TicketSettings = {
+      categoryId: '',
+      channelId: '',
+      messageId: '',
+      tags: [],
+      adminRoles: [],
+      supportRoles: [],
+      autoCloseHours: 24,
+      userCanClose: true
+    };
+
     try {
+      if (!existsSync(SETTINGS_PATH)) {
+        if (existsSync(oldSettingsPath)) {
+          console.log('Migrating settings from data/settings.json to root settings.json');
+          copyFileSync(oldSettingsPath, SETTINGS_PATH);
+        } else {
+          console.log('Creating new settings.json file with default values');
+          writeFileSync(SETTINGS_PATH, JSON.stringify({ settings: defaultSettings }, null, 2));
+        }
+      }
+
       const file = readFileSync(SETTINGS_PATH, 'utf-8');
       const data = JSON.parse(file);
       return data.settings;
     } catch (error) {
       console.error('Failed to load settings file:', error);
-      return {
-        categoryId: '',
-        channelId: '',
-        messageId: '',
-        tags: [],
-        adminRoles: [],
-        supportRoles: [],
-        autoCloseHours: 24,
-        userCanClose: true
-      };
+      return defaultSettings;
     }
   }
 

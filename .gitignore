@@ -1,4 +1,5 @@
 .env
+settings.json
 output.txt
 data/
 AGENTS.md

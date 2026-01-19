@@ -57749,10 +57749,10 @@ var import_discord16 = __toESM(require_src(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 
 // src/models/DataManager.ts
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from "fs";
 import { join } from "path";
 var __dirname = "/home/y4/Documents/Projects/y4gg/wl-dc-bot/src/models";
-var SETTINGS_PATH = join(__dirname, "../../data/settings.json");
+var SETTINGS_PATH = join(process.cwd(), "settings.json");
 var TICKETS_PATH = join(__dirname, "../../data/tickets.json");
 
 class DataManager {
@@ -57763,22 +57763,33 @@ class DataManager {
     this.ticketsData = this.loadTicketsData();
   }
   loadSettings() {
+    const oldSettingsPath = join(__dirname, "../../data/settings.json");
+    const defaultSettings = {
+      categoryId: "",
+      channelId: "",
+      messageId: "",
+      tags: [],
+      adminRoles: [],
+      supportRoles: [],
+      autoCloseHours: 24,
+      userCanClose: true
+    };
     try {
+      if (!existsSync(SETTINGS_PATH)) {
+        if (existsSync(oldSettingsPath)) {
+          console.log("Migrating settings from data/settings.json to root settings.json");
+          copyFileSync(oldSettingsPath, SETTINGS_PATH);
+        } else {
+          console.log("Creating new settings.json file with default values");
+          writeFileSync(SETTINGS_PATH, JSON.stringify({ settings: defaultSettings }, null, 2));
+        }
+      }
       const file = readFileSync(SETTINGS_PATH, "utf-8");
       const data = JSON.parse(file);
       return data.settings;
     } catch (error) {
       console.error("Failed to load settings file:", error);
-      return {
-        categoryId: "",
-        channelId: "",
-        messageId: "",
-        tags: [],
-        adminRoles: [],
-        supportRoles: [],
-        autoCloseHours: 24,
-        userCanClose: true
-      };
+      return defaultSettings;
     }
   }
   loadTicketsData() {
@@ -57872,6 +57883,10 @@ class DataManager {
 }
 var dataManager = new DataManager;
 
+// src/index.ts
+import { existsSync as existsSync2, mkdirSync } from "fs";
+import { join as join3 } from "path";
+
 // src/handlers/buttonHandler.ts
 var import_discord = __toESM(require_src(), 1);
 async function handleCreateTicket(interaction) {
@@ -57879,14 +57894,14 @@ async function handleCreateTicket(interaction) {
   if (!settings.categoryId) {
     await interaction.reply({
       content: "Ticket category has not been configured. Please use /setup ticketcategory first.",
-      ephemeral: true
+      flags: [import_discord.MessageFlags.Ephemeral]
     });
     return;
   }
   if (settings.tags.length === 0) {
     await interaction.reply({
       content: "No tags have been configured. Please use /setup tags first.",
-      ephemeral: true
+      flags: [import_discord.MessageFlags.Ephemeral]
     });
     return;
   }
@@ -57894,7 +57909,7 @@ async function handleCreateTicket(interaction) {
   if (existingTicket) {
     await interaction.reply({
       content: `You already have an open ticket: **<#${existingTicket.channelId}>**`,
-      ephemeral: true
+      flags: [import_discord.MessageFlags.Ephemeral]
     });
     return;
   }
@@ -57903,7 +57918,7 @@ async function handleCreateTicket(interaction) {
   await interaction.reply({
     content: "Please select a tag for your ticket:",
     components: [row],
-    ephemeral: true
+    flags: [import_discord.MessageFlags.Ephemeral]
   });
 }
 
@@ -57962,7 +57977,7 @@ async function handleTagSelection(interaction) {
   if (!settings.categoryId) {
     await interaction.reply({
       content: "Ticket category has not been configured.",
-      ephemeral: true
+      flags: [import_discord3.MessageFlags.Ephemeral]
     });
     return;
   }
@@ -57971,11 +57986,11 @@ async function handleTagSelection(interaction) {
   if (!category || category.type !== import_discord3.ChannelType.GuildCategory) {
     await interaction.reply({
       content: "Invalid ticket category.",
-      ephemeral: true
+      flags: [import_discord3.MessageFlags.Ephemeral]
     });
     return;
   }
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: [import_discord3.MessageFlags.Ephemeral] });
   const channelName = `ticket-${interaction.user.username}-${Date.now().toString().slice(-4)}`;
   try {
     const ticketChannel = await guild.channels.create({
@@ -58037,8 +58052,8 @@ Please describe your issue and our support team will be with you shortly.`
 
 // src/utils/transcriptGenerator.ts
 import { writeFileSync as writeFileSync2 } from "fs";
+import { cwd } from "process";
 import { join as join2 } from "path";
-var __dirname = "/home/y4/Documents/Projects/y4gg/wl-dc-bot/src/utils";
 async function generateTranscript(channel, ticketId, userId) {
   const messages = [];
   let lastId;
@@ -58072,7 +58087,7 @@ async function generateTranscript(channel, ticketId, userId) {
 }
 function saveTranscriptToFile(transcript) {
   const filename = `transcript-${transcript.ticketId}-${Date.now()}.txt`;
-  const filepath = join2(__dirname, "../../data/transcripts", filename);
+  const filepath = join2(cwd(), "data/transcripts", filename);
   let content = `Ticket Transcript - ${transcript.ticketId}
 `;
   content += `User ID: ${transcript.userId}
@@ -58175,40 +58190,40 @@ var tags_default = {
     const settings = dataManager.getSettings();
     if (list === "yes") {
       if (settings.tags.length === 0) {
-        await interaction.reply({ content: "No tags configured.", ephemeral: true });
+        await interaction.reply({ content: "No tags configured.", flags: [import_discord4.MessageFlags.Ephemeral] });
         return;
       }
       const tagList = settings.tags.map((t, i) => `${i + 1}. ${t}`).join(`
 `);
       await interaction.reply({ content: `Current tags:
-${tagList}`, ephemeral: true });
+${tagList}`, flags: [import_discord4.MessageFlags.Ephemeral] });
       return;
     }
     if (action === "clear") {
       dataManager.updateSettings({ tags: [] });
-      await interaction.reply({ content: "All tags have been cleared.", ephemeral: true });
+      await interaction.reply({ content: "All tags have been cleared.", flags: [import_discord4.MessageFlags.Ephemeral] });
       return;
     }
     if (!tag) {
-      await interaction.reply({ content: "Please provide a tag to add or remove.", ephemeral: true });
+      await interaction.reply({ content: "Please provide a tag to add or remove.", flags: [import_discord4.MessageFlags.Ephemeral] });
       return;
     }
     if (action === "add") {
       if (settings.tags.includes(tag)) {
-        await interaction.reply({ content: "This tag already exists.", ephemeral: true });
+        await interaction.reply({ content: "This tag already exists.", flags: [import_discord4.MessageFlags.Ephemeral] });
         return;
       }
       const newTags = [...settings.tags, tag];
       dataManager.updateSettings({ tags: newTags });
-      await interaction.reply({ content: `Tag "${tag}" has been added.`, ephemeral: true });
+      await interaction.reply({ content: `Tag "${tag}" has been added.`, flags: [import_discord4.MessageFlags.Ephemeral] });
     } else if (action === "remove") {
       if (!settings.tags.includes(tag)) {
-        await interaction.reply({ content: "This tag does not exist.", ephemeral: true });
+        await interaction.reply({ content: "This tag does not exist.", flags: [import_discord4.MessageFlags.Ephemeral] });
         return;
       }
       const newTags = settings.tags.filter((t) => t !== tag);
       dataManager.updateSettings({ tags: newTags });
-      await interaction.reply({ content: `Tag "${tag}" has been removed.`, ephemeral: true });
+      await interaction.reply({ content: `Tag "${tag}" has been removed.`, flags: [import_discord4.MessageFlags.Ephemeral] });
     }
   }
 };
@@ -58220,7 +58235,7 @@ var ticketchannel_default = {
     const channel = interaction.options.getChannel("channel");
     const settings = dataManager.getSettings();
     if (!channel || channel.type !== 0) {
-      await interaction.reply({ content: "Please select a text channel.", ephemeral: true });
+      await interaction.reply({ content: "Please select a text channel.", flags: [import_discord5.MessageFlags.Ephemeral] });
       return;
     }
     const button = new import_discord5.ButtonBuilder().setCustomId("create_ticket").setLabel("Create Ticket").setStyle(import_discord5.ButtonStyle.Primary);
@@ -58233,7 +58248,7 @@ var ticketchannel_default = {
       channelId: channel.id,
       messageId: message.id
     });
-    await interaction.reply({ content: "Create Ticket button has been sent!", ephemeral: true });
+    await interaction.reply({ content: "Create Ticket button has been sent!", flags: [import_discord5.MessageFlags.Ephemeral] });
   }
 };
 // src/commands/setup/ticketcategory.ts
@@ -58243,11 +58258,11 @@ var ticketcategory_default = {
   async execute(interaction) {
     const category = interaction.options.getChannel("category");
     if (!category || category.type !== 4) {
-      await interaction.reply({ content: "Please select a category channel.", ephemeral: true });
+      await interaction.reply({ content: "Please select a category channel.", flags: [import_discord6.MessageFlags.Ephemeral] });
       return;
     }
     dataManager.updateSettings({ categoryId: category.id });
-    await interaction.reply({ content: `Ticket category has been set to **${category.name}**.`, ephemeral: true });
+    await interaction.reply({ content: `Ticket category has been set to **${category.name}**.`, flags: [import_discord6.MessageFlags.Ephemeral] });
   }
 };
 // src/commands/setup/roles.ts
@@ -58263,7 +58278,7 @@ var roles_default = {
       const roleType = type === "admin" ? "Admin" : "Support";
       const roles = type === "admin" ? settings.adminRoles : settings.supportRoles;
       if (roles.length === 0) {
-        await interaction.reply({ content: `No ${roleType.toLowerCase()} roles configured.`, ephemeral: true });
+        await interaction.reply({ content: `No ${roleType.toLowerCase()} roles configured.`, flags: [import_discord7.MessageFlags.Ephemeral] });
         return;
       }
       const roleList = roles.map((roleId) => {
@@ -58272,17 +58287,17 @@ var roles_default = {
       }).join(`
 `);
       await interaction.reply({ content: `${roleType} roles:
-${roleList}`, ephemeral: true });
+${roleList}`, flags: [import_discord7.MessageFlags.Ephemeral] });
       return;
     }
     if (!role) {
-      await interaction.reply({ content: "Please select a role to add or remove.", ephemeral: true });
+      await interaction.reply({ content: "Please select a role to add or remove.", flags: [import_discord7.MessageFlags.Ephemeral] });
       return;
     }
     const targetArray = type === "admin" ? settings.adminRoles : settings.supportRoles;
     if (action === "add") {
       if (targetArray.includes(role.id)) {
-        await interaction.reply({ content: "This role is already added.", ephemeral: true });
+        await interaction.reply({ content: "This role is already added.", flags: [import_discord7.MessageFlags.Ephemeral] });
         return;
       }
       const newArray = [...targetArray, role.id];
@@ -58291,10 +58306,10 @@ ${roleList}`, ephemeral: true });
       } else {
         dataManager.updateSettings({ supportRoles: newArray });
       }
-      await interaction.reply({ content: `Role **${role.name}** has been added as ${type}.`, ephemeral: true });
+      await interaction.reply({ content: `Role **${role.name}** has been added as ${type}.`, flags: [import_discord7.MessageFlags.Ephemeral] });
     } else if (action === "remove") {
       if (!targetArray.includes(role.id)) {
-        await interaction.reply({ content: "This role is not configured.", ephemeral: true });
+        await interaction.reply({ content: "This role is not configured.", flags: [import_discord7.MessageFlags.Ephemeral] });
         return;
       }
       const newArray = targetArray.filter((id) => id !== role.id);
@@ -58303,7 +58318,7 @@ ${roleList}`, ephemeral: true });
       } else {
         dataManager.updateSettings({ supportRoles: newArray });
       }
-      await interaction.reply({ content: `Role **${role.name}** has been removed from ${type}.`, ephemeral: true });
+      await interaction.reply({ content: `Role **${role.name}** has been removed from ${type}.`, flags: [import_discord7.MessageFlags.Ephemeral] });
     }
   }
 };
@@ -58316,11 +58331,11 @@ var permissions_default = {
     const settings = dataManager.getSettings();
     if (view === "yes") {
       const permissionsList = `
-**Current Ticket Permissions:**
-━━━━━━━━━━━━━━━━━━
-• User Can Close: ${settings.userCanClose ? "✅ Enabled" : "❌ Disabled"}
-`;
-      await interaction.reply({ content: permissionsList, ephemeral: true });
+ **Current Ticket Permissions:**
+ ━━━━━━━━━━━━━━━━━━
+ • User Can Close: ${settings.userCanClose ? "✅ Enabled" : "❌ Disabled"}
+ `;
+      await interaction.reply({ content: permissionsList, flags: [import_discord8.MessageFlags.Ephemeral] });
       return;
     }
     const setting = interaction.options.getString("setting");
@@ -58330,7 +58345,7 @@ var permissions_default = {
       dataManager.updateSettings({ userCanClose: newValue });
       await interaction.reply({
         content: `User can close tickets has been **${newValue ? "enabled" : "disabled"}**.`,
-        ephemeral: true
+        flags: [import_discord8.MessageFlags.Ephemeral]
       });
     }
   }
@@ -58412,18 +58427,18 @@ var close_default = {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord10.MessageFlags.Ephemeral] });
       return;
     }
     if (!canCloseTicket(interaction, ticket.userId)) {
-      await interaction.reply({ content: "You do not have permission to close this ticket.", ephemeral: true });
+      await interaction.reply({ content: "You do not have permission to close this ticket.", flags: [import_discord10.MessageFlags.Ephemeral] });
       return;
     }
     const permissions = channel.permissionsFor(interaction.client.user);
     if (!permissions || !permissions.has("ViewChannel") || !permissions.has("ReadMessageHistory")) {
       await interaction.reply({
         content: "I do not have permission to access this channel. Please contact an administrator.",
-        ephemeral: true
+        flags: [import_discord10.MessageFlags.Ephemeral]
       });
       return;
     }
@@ -58463,7 +58478,6 @@ Failed to save transcript due to permission issues.`
       console.error("Failed to delete channel:", error);
     }
     dataManager.deleteTicket(ticket.id);
-    await interaction.followUp({ content: "Ticket closed successfully.", ephemeral: true });
   }
 };
 
@@ -58475,19 +58489,19 @@ var claim_default = {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord11.MessageFlags.Ephemeral] });
       return;
     }
     if (ticket.status === "closed") {
-      await interaction.reply({ content: "This ticket is already closed.", ephemeral: true });
+      await interaction.reply({ content: "This ticket is already closed.", flags: [import_discord11.MessageFlags.Ephemeral] });
       return;
     }
     if (!canClaimTicket(interaction)) {
-      await interaction.reply({ content: "You do not have permission to claim tickets.", ephemeral: true });
+      await interaction.reply({ content: "You do not have permission to claim tickets.", flags: [import_discord11.MessageFlags.Ephemeral] });
       return;
     }
     if (ticket.claimedBy === interaction.user.id) {
-      await interaction.reply({ content: "You have already claimed this ticket.", ephemeral: true });
+      await interaction.reply({ content: "You have already claimed this ticket.", flags: [import_discord11.MessageFlags.Ephemeral] });
       return;
     }
     dataManager.updateTicket(ticket.id, {
@@ -58509,11 +58523,11 @@ var adduser_default = {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord12.MessageFlags.Ephemeral] });
       return;
     }
     if (!hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: "You do not have permission to add users to tickets.", ephemeral: true });
+      await interaction.reply({ content: "You do not have permission to add users to tickets.", flags: [import_discord12.MessageFlags.Ephemeral] });
       return;
     }
     const user = interaction.options.getUser("user");
@@ -58522,7 +58536,7 @@ var adduser_default = {
       await interaction.reply({ content: `${user.username} has been added to the ticket.` });
     } catch (error) {
       console.error("Failed to add user:", error);
-      await interaction.reply({ content: "Failed to add user to the ticket.", ephemeral: true });
+      await interaction.reply({ content: "Failed to add user to the ticket.", flags: [import_discord12.MessageFlags.Ephemeral] });
     }
   }
 };
@@ -58535,16 +58549,16 @@ var removeuser_default = {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord13.MessageFlags.Ephemeral] });
       return;
     }
     if (!hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: "You do not have permission to remove users from tickets.", ephemeral: true });
+      await interaction.reply({ content: "You do not have permission to remove users from tickets.", flags: [import_discord13.MessageFlags.Ephemeral] });
       return;
     }
     const user = interaction.options.getUser("user");
     if (user.id === ticket.userId) {
-      await interaction.reply({ content: "Cannot remove the ticket creator.", ephemeral: true });
+      await interaction.reply({ content: "Cannot remove the ticket creator.", flags: [import_discord13.MessageFlags.Ephemeral] });
       return;
     }
     try {
@@ -58552,7 +58566,7 @@ var removeuser_default = {
       await interaction.reply({ content: `${user.username} has been removed from the ticket.` });
     } catch (error) {
       console.error("Failed to remove user:", error);
-      await interaction.reply({ content: "Failed to remove user from the ticket.", ephemeral: true });
+      await interaction.reply({ content: "Failed to remove user from the ticket.", flags: [import_discord13.MessageFlags.Ephemeral] });
     }
   }
 };
@@ -58565,11 +58579,11 @@ var rename_default = {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord14.MessageFlags.Ephemeral] });
       return;
     }
     if (!canManageTicket(interaction, ticket.userId)) {
-      await interaction.reply({ content: "You do not have permission to rename this ticket.", ephemeral: true });
+      await interaction.reply({ content: "You do not have permission to rename this ticket.", flags: [import_discord14.MessageFlags.Ephemeral] });
       return;
     }
     const newName = interaction.options.getString("name");
@@ -58579,7 +58593,7 @@ var rename_default = {
       await interaction.reply({ content: `Ticket channel has been renamed to **${sanitizedName}**.` });
     } catch (error) {
       console.error("Failed to rename channel:", error);
-      await interaction.reply({ content: "Failed to rename the ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "Failed to rename the ticket channel.", flags: [import_discord14.MessageFlags.Ephemeral] });
     }
   }
 };
@@ -58592,11 +58606,11 @@ var transcript_default = {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", ephemeral: true });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord15.MessageFlags.Ephemeral] });
       return;
     }
     if (!hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: "You do not have permission to generate transcripts.", ephemeral: true });
+      await interaction.reply({ content: "You do not have permission to generate transcripts.", flags: [import_discord15.MessageFlags.Ephemeral] });
       return;
     }
     await interaction.deferReply();
@@ -58619,7 +58633,7 @@ var transcript_default = {
       }
     } catch (error) {
       console.error("Failed to generate transcript:", error);
-      await interaction.followUp({ content: "Failed to generate transcript.", ephemeral: true });
+      await interaction.followUp({ content: "Failed to generate transcript.", flags: [import_discord15.MessageFlags.Ephemeral] });
     }
   }
 };
@@ -58661,6 +58675,10 @@ async function registerCommands() {
 }
 client.once("clientReady", async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
+  const transcriptsDir = join3(process.cwd(), "data", "transcripts");
+  if (!existsSync2(transcriptsDir)) {
+    mkdirSync(transcriptsDir, { recursive: true });
+  }
   await registerCommands();
   startInactivityCheck(client);
 });
@@ -58707,9 +58725,9 @@ client.on("interactionCreate", async (interaction) => {
   } catch (error) {
     console.error("Error handling interaction:", error);
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: "An error occurred while processing your request.", ephemeral: true });
+      await interaction.followUp({ content: "An error occurred while processing your request.", flags: [import_discord16.MessageFlags.Ephemeral] });
     } else {
-      await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true });
+      await interaction.reply({ content: "An error occurred while processing your request.", flags: [import_discord16.MessageFlags.Ephemeral] });
     }
   }
 });
