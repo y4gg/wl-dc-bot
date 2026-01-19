@@ -43,8 +43,14 @@ export function canCloseTicket(interaction: Interaction, ticketUserId: string): 
   
   const member = interaction.member as GuildMember;
   const isTicketCreator = member.id === ticketUserId;
+  const settings = dataManager.getSettings();
+  const userCanClose = settings.userCanClose;
   
-  return isAdmin(member) || isSupport(member) || isTicketCreator;
+  if (isAdmin(member) || isSupport(member)) return true;
+  
+  if (isTicketCreator && userCanClose) return true;
+  
+  return false;
 }
 
 export function hasAdminOrSupport(interaction: Interaction): boolean {

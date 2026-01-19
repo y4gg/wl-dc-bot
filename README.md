@@ -133,12 +133,20 @@ Available in ticket channels:
 
 ## Data Storage
 
-All data is stored in `data/tickets.json`:
-- Bot settings (category, channel, tags, roles)
-- Active tickets
-- Ticket transcripts
+Data is stored in two separate files for better security:
 
-Transcripts are saved in `data/transcripts/` directory.
+- `data/settings.json` - Bot configuration (can be committed to git)
+  - Category, channel, and message IDs
+  - Ticket tags
+  - Admin and support roles
+  - Auto-close settings
+  - User close permissions
+
+- `data/tickets.json` - Ticket data (local only, not in git)
+  - Active tickets
+  - Ticket transcripts metadata
+
+Transcript files are saved in `data/transcripts/` directory (local only, not in git).
 
 ## Permissions
 
@@ -173,7 +181,7 @@ Transcripts are saved in `data/transcripts/` directory.
 
 ### Auto-close not working
 - Check bot has sufficient permissions
-- Verify `data/tickets.json` is being saved properly
+- Verify `data/tickets.json` is being saved properly (check file write permissions)
 - Check console for error messages
 
 ## Development

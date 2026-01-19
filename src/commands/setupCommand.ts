@@ -4,11 +4,12 @@ import * as setupCommands from './setup';
 export default {
   data: new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('Setup the ticket bot')
+    .setDescription('Setup ticket bot')
     .addSubcommand(setupCommands.tags.data)
     .addSubcommand(setupCommands.ticketchannel.data)
     .addSubcommand(setupCommands.ticketcategory.data)
-    .addSubcommand(setupCommands.roles.data),
+    .addSubcommand(setupCommands.roles.data)
+    .addSubcommand(setupCommands.permissions.data),
 
   async execute(interaction: any) {
     const subcommand = interaction.options.getSubcommand();
@@ -25,6 +26,9 @@ export default {
         break;
       case 'roles':
         await setupCommands.roles.execute(interaction);
+        break;
+      case 'permissions':
+        await setupCommands.permissions.execute(interaction);
         break;
     }
   }

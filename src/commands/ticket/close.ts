@@ -22,29 +22,52 @@ export default {
       return;
     }
 
-    await interaction.deferReply();
-
-    const transcript = await generateTranscript(channel as any, ticket.id, ticket.userId);
-    const filepath = saveTranscriptToFile(transcript);
-    
-    dataManager.addTranscript(transcript);
-    dataManager.updateTicket(ticket.id, { status: 'closed', transcript: filepath });
-
-    try {
-      const user = await interaction.client.users.fetch(ticket.userId);
-      await user.send({
-        content: `Your ticket **${ticket.id}** has been closed.\n\nHere is a transcript of your conversation:`,
-        files: [filepath]
+    const permissions = channel.permissionsFor(interaction.client.user);
+    if (!permissions || !permissions.has('ViewChannel') || !permissions.has('ReadMessageHistory')) {
+      await interaction.reply({ 
+        content: 'I do not have permission to access this channel. Please contact an administrator.', 
+        ephemeral: true 
       });
-    } catch (error) {
-      console.error('Failed to send transcript to user:', error);
+      return;
     }
 
-    await channel.send({
-      content: `Ticket has been closed by ${interaction.user.username}.\nTranscript has been saved and sent to the ticket creator.`
-    });
+    await interaction.deferReply();
 
-    await channel.delete();
+    let transcript;
+    let filepath;
+
+    try {
+      transcript = await generateTranscript(channel as any, ticket.id, ticket.userId);
+      filepath = saveTranscriptToFile(transcript);
+      dataManager.addTranscript(transcript);
+      dataManager.updateTicket(ticket.id, { status: 'closed', transcript: filepath });
+
+      try {
+        const user = await interaction.client.users.fetch(ticket.userId);
+        await user.send({
+          content: `Your ticket **${ticket.id}** has been closed.\n\nHere is a transcript of your conversation:`,
+          files: [filepath]
+        });
+      } catch (error) {
+        console.error('Failed to send transcript to user:', error);
+      }
+
+      await channel.send({
+        content: `Ticket has been closed by ${interaction.user.username}.\nTranscript has been saved and sent to the ticket creator.`
+      });
+    } catch (error) {
+      console.error('Failed to generate transcript:', error);
+      await channel.send({
+        content: `Ticket has been closed by ${interaction.user.username}.\nFailed to save transcript due to permission issues.`
+      });
+    }
+
+    try {
+      await channel.delete();
+    } catch (error) {
+      console.error('Failed to delete channel:', error);
+    }
+    
     dataManager.deleteTicket(ticket.id);
 
     await interaction.followUp({ content: 'Ticket closed successfully.', ephemeral: true });

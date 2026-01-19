@@ -1,5 +1,6 @@
-import { StringSelectMenuInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
+import { StringSelectMenuInteraction, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { dataManager } from '../models/DataManager';
+import { createTicketEmbed, getTicketButtons } from '../utils/ticketEmbed';
 
 export async function handleTagSelection(interaction: StringSelectMenuInteraction) {
   const selectedTag = interaction.values[0];
@@ -35,6 +36,10 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
       parent: category.id,
       permissionOverwrites: [
         {
+          id: interaction.client.user.id,
+          allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory', 'EmbedLinks', 'AttachFiles', 'ManageMessages']
+        },
+        {
           id: guild.id,
           deny: ['ViewChannel', 'SendMessages']
         },
@@ -61,22 +66,18 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
       status: 'open'
     });
 
-    const closeButton = new ButtonBuilder()
-      .setCustomId('close_ticket')
-      .setLabel('Close Ticket')
-      .setStyle(ButtonStyle.Danger);
+    const embed = createTicketEmbed(ticket);
+    const buttons = getTicketButtons(ticket, settings);
 
-    const claimButton = new ButtonBuilder()
-      .setCustomId('claim_ticket')
-      .setLabel('Claim Ticket')
-      .setStyle(ButtonStyle.Primary);
+    const embedMessage = await ticketChannel.send({
+      embeds: [embed],
+      components: [buttons]
+    });
 
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(closeButton, claimButton);
+    dataManager.updateTicket(ticket.id, { embedMessageId: embedMessage.id });
 
     await ticketChannel.send({
-      content: `**Ticket #${ticket.id}**\n\nWelcome, ${interaction.user}! Your ticket has been created with the tag: **${selectedTag}**\n\nPlease describe your issue and our support team will be with you shortly.`,
-      components: [row]
+      content: `Welcome, ${interaction.user}! Your ticket has been created with the tag: **${selectedTag}**\n\nPlease describe your issue and our support team will be with you shortly.`
     });
 
     await interaction.editReply({

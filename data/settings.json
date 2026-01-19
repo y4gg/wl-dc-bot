@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "categoryId": "1462763714431160320",
+    "channelId": "",
+    "messageId": "",
+    "tags": [
+      "Test"
+    ],
+    "adminRoles": [
+      "1130547418199490578",
+      "1130547418199490577"
+    ],
+    "supportRoles": [
+      "1130547418199490574"
+    ],
+    "autoCloseHours": 24,
+    "userCanClose": false
+  }
+}

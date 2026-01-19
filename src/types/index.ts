@@ -9,6 +9,7 @@ export interface Ticket {
   createdAt: number;
   lastActivity: number;
   transcript?: string;
+  embedMessageId?: string;
 }
 
 export interface TicketSettings {
@@ -19,6 +20,7 @@ export interface TicketSettings {
   adminRoles: string[];
   supportRoles: string[];
   autoCloseHours: number;
+  userCanClose: boolean;
 }
 
 export interface BotData {

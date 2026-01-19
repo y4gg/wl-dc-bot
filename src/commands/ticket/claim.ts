@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 import { canClaimTicket } from '../../utils/permissionChecks';
+import { updateTicketEmbed } from '../../utils/ticketEmbed';
 
 export default {
   data: new SlashCommandBuilder()
@@ -35,6 +36,8 @@ export default {
       status: 'claimed',
       claimedBy: interaction.user.id 
     });
+
+    await updateTicketEmbed(interaction.client, ticket);
 
     await interaction.reply({ 
       content: `Ticket has been claimed by ${interaction.user.username}.` 

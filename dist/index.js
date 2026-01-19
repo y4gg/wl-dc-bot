@@ -57745,63 +57745,90 @@ var require_main = __commonJS((exports, module) => {
 });
 
 // src/index.ts
-var import_discord14 = __toESM(require_src(), 1);
+var import_discord16 = __toESM(require_src(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 
 // src/models/DataManager.ts
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 var __dirname = "/home/y4/Documents/Projects/y4gg/wl-dc-bot/src/models";
-var DATA_PATH = join(__dirname, "../../data/tickets.json");
+var SETTINGS_PATH = join(__dirname, "../../data/settings.json");
+var TICKETS_PATH = join(__dirname, "../../data/tickets.json");
 
 class DataManager {
-  data;
+  settings;
+  ticketsData;
   constructor() {
-    this.data = this.loadData();
+    this.settings = this.loadSettings();
+    this.ticketsData = this.loadTicketsData();
   }
-  loadData() {
+  loadSettings() {
     try {
-      const file = readFileSync(DATA_PATH, "utf-8");
-      return JSON.parse(file);
+      const file = readFileSync(SETTINGS_PATH, "utf-8");
+      const data = JSON.parse(file);
+      return data.settings;
     } catch (error) {
-      console.error("Failed to load data file:", error);
+      console.error("Failed to load settings file:", error);
       return {
-        settings: {
-          tags: [],
-          adminRoles: [],
-          supportRoles: [],
-          autoCloseHours: 24
-        },
+        categoryId: "",
+        channelId: "",
+        messageId: "",
+        tags: [],
+        adminRoles: [],
+        supportRoles: [],
+        autoCloseHours: 24,
+        userCanClose: true
+      };
+    }
+  }
+  loadTicketsData() {
+    try {
+      const file = readFileSync(TICKETS_PATH, "utf-8");
+      const data = JSON.parse(file);
+      return {
+        tickets: data.tickets || [],
+        transcripts: data.transcripts || []
+      };
+    } catch (error) {
+      console.error("Failed to load tickets file:", error);
+      return {
         tickets: [],
         transcripts: []
       };
     }
   }
-  saveData() {
+  saveSettings() {
     try {
-      writeFileSync(DATA_PATH, JSON.stringify(this.data, null, 2));
+      writeFileSync(SETTINGS_PATH, JSON.stringify({ settings: this.settings }, null, 2));
     } catch (error) {
-      console.error("Failed to save data file:", error);
+      console.error("Failed to save settings file:", error);
+    }
+  }
+  saveTicketsData() {
+    try {
+      writeFileSync(TICKETS_PATH, JSON.stringify(this.ticketsData, null, 2));
+    } catch (error) {
+      console.error("Failed to save tickets file:", error);
     }
   }
   getSettings() {
-    return this.data.settings;
+    return this.settings;
   }
   updateSettings(settings) {
-    this.data.settings = { ...this.data.settings, ...settings };
-    this.saveData();
+    this.settings = { ...this.settings, ...settings };
+    this.saveSettings();
   }
   getTickets() {
-    return this.data.tickets;
+    return this.ticketsData.tickets;
   }
   getTicketById(ticketId) {
-    return this.data.tickets.find((t) => t.id === ticketId);
+    return this.ticketsData.tickets.find((t) => t.id === ticketId);
   }
   getTicketByChannelId(channelId) {
-    return this.data.tickets.find((t) => t.channelId === channelId);
+    return this.ticketsData.tickets.find((t) => t.channelId === channelId);
   }
   getTicketsByUser(userId) {
-    return this.data.tickets.filter((t) => t.userId === userId);
+    return this.ticketsData.tickets.filter((t) => t.userId === userId);
   }
   createTicket(ticket) {
     const newTicket = {
@@ -57810,15 +57837,15 @@ class DataManager {
       createdAt: Date.now(),
       lastActivity: Date.now()
     };
-    this.data.tickets.push(newTicket);
-    this.saveData();
+    this.ticketsData.tickets.push(newTicket);
+    this.saveTicketsData();
     return newTicket;
   }
   updateTicket(ticketId, updates) {
-    const index = this.data.tickets.findIndex((t) => t.id === ticketId);
+    const index = this.ticketsData.tickets.findIndex((t) => t.id === ticketId);
     if (index !== -1) {
-      this.data.tickets[index] = { ...this.data.tickets[index], ...updates, lastActivity: Date.now() };
-      this.saveData();
+      this.ticketsData.tickets[index] = { ...this.ticketsData.tickets[index], ...updates, lastActivity: Date.now() };
+      this.saveTicketsData();
     }
   }
   updateTicketActivity(channelId) {
@@ -57828,19 +57855,19 @@ class DataManager {
     }
   }
   deleteTicket(ticketId) {
-    this.data.tickets = this.data.tickets.filter((t) => t.id !== ticketId);
-    this.saveData();
+    this.ticketsData.tickets = this.ticketsData.tickets.filter((t) => t.id !== ticketId);
+    this.saveTicketsData();
   }
   getInactiveTickets(hours) {
     const threshold = Date.now() - hours * 60 * 60 * 1000;
-    return this.data.tickets.filter((t) => t.status === "open" && t.lastActivity < threshold);
+    return this.ticketsData.tickets.filter((t) => t.status === "open" && t.lastActivity < threshold);
   }
   getTranscript(ticketId) {
-    return this.data.transcripts.find((t) => t.ticketId === ticketId);
+    return this.ticketsData.transcripts.find((t) => t.ticketId === ticketId);
   }
   addTranscript(transcript) {
-    this.data.transcripts.push(transcript);
-    this.saveData();
+    this.ticketsData.transcripts.push(transcript);
+    this.saveTicketsData();
   }
 }
 var dataManager = new DataManager;
@@ -57881,7 +57908,54 @@ async function handleCreateTicket(interaction) {
 }
 
 // src/handlers/selectMenuHandler.ts
+var import_discord3 = __toESM(require_src(), 1);
+
+// src/utils/ticketEmbed.ts
 var import_discord2 = __toESM(require_src(), 1);
+function createTicketEmbed(ticket) {
+  const embed = new import_discord2.EmbedBuilder().setColor(65280).setTitle("\uD83D\uDCDD Ticket Information").setTimestamp();
+  const statusEmoji = ticket.status === "open" ? "\uD83D\uDFE2" : "\uD83D\uDD35";
+  const statusText = ticket.status === "open" ? "Open" : "Claimed";
+  let claimedByText = "Not claimed";
+  if (ticket.claimedBy) {
+    claimedByText = `<@${ticket.claimedBy}>`;
+  }
+  embed.addFields([
+    { name: "Ticket ID", value: ticket.id, inline: true },
+    { name: "Tag", value: ticket.tag, inline: true },
+    { name: "Created by", value: `<@${ticket.userId}>`, inline: true },
+    { name: "Status", value: `${statusEmoji} ${statusText}`, inline: true },
+    { name: "Claimed by", value: claimedByText, inline: true }
+  ]);
+  return embed;
+}
+function getTicketButtons(ticket, settings) {
+  const closeButton = new import_discord2.ButtonBuilder().setCustomId("close_ticket").setLabel("Close Ticket").setStyle(import_discord2.ButtonStyle.Danger);
+  const claimButton = new import_discord2.ButtonBuilder().setCustomId("claim_ticket").setLabel("Claim Ticket").setStyle(import_discord2.ButtonStyle.Primary).setDisabled(ticket.status === "claimed");
+  const row = new import_discord2.ActionRowBuilder().addComponents(closeButton, claimButton);
+  return row;
+}
+async function updateTicketEmbed(client, ticket) {
+  try {
+    const channel = await client.channels.fetch(ticket.channelId);
+    if (!channel || !ticket.embedMessageId)
+      return;
+    const settings = dataManager.getSettings();
+    const embed = createTicketEmbed(ticket);
+    const buttons = getTicketButtons(ticket, settings);
+    const message = await channel.messages.fetch(ticket.embedMessageId);
+    if (message) {
+      await message.edit({
+        embeds: [embed],
+        components: [buttons]
+      });
+    }
+  } catch (error) {
+    console.error("Failed to update ticket embed:", error);
+  }
+}
+
+// src/handlers/selectMenuHandler.ts
 async function handleTagSelection(interaction) {
   const selectedTag = interaction.values[0];
   const settings = dataManager.getSettings();
@@ -57894,7 +57968,7 @@ async function handleTagSelection(interaction) {
   }
   const guild = interaction.guild;
   const category = guild.channels.cache.get(settings.categoryId);
-  if (!category || category.type !== import_discord2.ChannelType.GuildCategory) {
+  if (!category || category.type !== import_discord3.ChannelType.GuildCategory) {
     await interaction.reply({
       content: "Invalid ticket category.",
       ephemeral: true
@@ -57906,9 +57980,13 @@ async function handleTagSelection(interaction) {
   try {
     const ticketChannel = await guild.channels.create({
       name: channelName,
-      type: import_discord2.ChannelType.GuildText,
+      type: import_discord3.ChannelType.GuildText,
       parent: category.id,
       permissionOverwrites: [
+        {
+          id: interaction.client.user.id,
+          allow: ["ViewChannel", "SendMessages", "ReadMessageHistory", "EmbedLinks", "AttachFiles", "ManageMessages"]
+        },
         {
           id: guild.id,
           deny: ["ViewChannel", "SendMessages"]
@@ -57934,16 +58012,17 @@ async function handleTagSelection(interaction) {
       tag: selectedTag,
       status: "open"
     });
-    const closeButton = new import_discord2.ButtonBuilder().setCustomId("close_ticket").setLabel("Close Ticket").setStyle(import_discord2.ButtonStyle.Danger);
-    const claimButton = new import_discord2.ButtonBuilder().setCustomId("claim_ticket").setLabel("Claim Ticket").setStyle(import_discord2.ButtonStyle.Primary);
-    const row = new import_discord2.ActionRowBuilder().addComponents(closeButton, claimButton);
+    const embed = createTicketEmbed(ticket);
+    const buttons = getTicketButtons(ticket, settings);
+    const embedMessage = await ticketChannel.send({
+      embeds: [embed],
+      components: [buttons]
+    });
+    dataManager.updateTicket(ticket.id, { embedMessageId: embedMessage.id });
     await ticketChannel.send({
-      content: `**Ticket #${ticket.id}**
+      content: `Welcome, ${interaction.user}! Your ticket has been created with the tag: **${selectedTag}**
 
-Welcome, ${interaction.user}! Your ticket has been created with the tag: **${selectedTag}**
-
-Please describe your issue and our support team will be with you shortly.`,
-      components: [row]
+Please describe your issue and our support team will be with you shortly.`
     });
     await interaction.editReply({
       content: `Your ticket has been created: **${ticketChannel}**`
@@ -58083,12 +58162,12 @@ Transcript has been saved and sent to the ticket creator.`
 }
 
 // src/commands/setupCommand.ts
-var import_discord7 = __toESM(require_src(), 1);
+var import_discord9 = __toESM(require_src(), 1);
 
 // src/commands/setup/tags.ts
-var import_discord3 = __toESM(require_src(), 1);
+var import_discord4 = __toESM(require_src(), 1);
 var tags_default = {
-  data: new import_discord3.SlashCommandSubcommandBuilder().setName("tags").setDescription("Configure ticket tags").addStringOption((option) => option.setName("action").setDescription("Add or remove tags").setRequired(true).addChoices({ name: "Add", value: "add" }, { name: "Remove", value: "remove" }, { name: "Clear", value: "clear" })).addStringOption((option) => option.setName("tag").setDescription("Tag to add or remove").setRequired(false)).addStringOption((option) => option.setName("list").setDescription("List all tags").setRequired(false).addChoices({ name: "Yes", value: "yes" }, { name: "No", value: "no" })),
+  data: new import_discord4.SlashCommandSubcommandBuilder().setName("tags").setDescription("Configure ticket tags").addStringOption((option) => option.setName("action").setDescription("Add or remove tags").setRequired(true).addChoices({ name: "Add", value: "add" }, { name: "Remove", value: "remove" }, { name: "Clear", value: "clear" })).addStringOption((option) => option.setName("tag").setDescription("Tag to add or remove").setRequired(false)).addStringOption((option) => option.setName("list").setDescription("List all tags").setRequired(false).addChoices({ name: "Yes", value: "yes" }, { name: "No", value: "no" })),
   async execute(interaction) {
     const action = interaction.options.getString("action");
     const tag = interaction.options.getString("tag");
@@ -58134,9 +58213,9 @@ ${tagList}`, ephemeral: true });
   }
 };
 // src/commands/setup/ticketchannel.ts
-var import_discord4 = __toESM(require_src(), 1);
+var import_discord5 = __toESM(require_src(), 1);
 var ticketchannel_default = {
-  data: new import_discord4.SlashCommandSubcommandBuilder().setName("ticketchannel").setDescription("Send the Create Ticket button message").addChannelOption((option) => option.setName("channel").setDescription("Channel to send the message to").setRequired(true)),
+  data: new import_discord5.SlashCommandSubcommandBuilder().setName("ticketchannel").setDescription("Send the Create Ticket button message").addChannelOption((option) => option.setName("channel").setDescription("Channel to send the message to").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.options.getChannel("channel");
     const settings = dataManager.getSettings();
@@ -58144,8 +58223,8 @@ var ticketchannel_default = {
       await interaction.reply({ content: "Please select a text channel.", ephemeral: true });
       return;
     }
-    const button = new import_discord4.ButtonBuilder().setCustomId("create_ticket").setLabel("Create Ticket").setStyle(import_discord4.ButtonStyle.Primary);
-    const row = new import_discord4.ActionRowBuilder().addComponents(button);
+    const button = new import_discord5.ButtonBuilder().setCustomId("create_ticket").setLabel("Create Ticket").setStyle(import_discord5.ButtonStyle.Primary);
+    const row = new import_discord5.ActionRowBuilder().addComponents(button);
     const message = await channel.send({
       content: "Click the button below to create a support ticket.",
       components: [row]
@@ -58158,9 +58237,9 @@ var ticketchannel_default = {
   }
 };
 // src/commands/setup/ticketcategory.ts
-var import_discord5 = __toESM(require_src(), 1);
+var import_discord6 = __toESM(require_src(), 1);
 var ticketcategory_default = {
-  data: new import_discord5.SlashCommandSubcommandBuilder().setName("ticketcategory").setDescription("Set the category for ticket channels").addChannelOption((option) => option.setName("category").setDescription("Category to create tickets in").setRequired(true)),
+  data: new import_discord6.SlashCommandSubcommandBuilder().setName("ticketcategory").setDescription("Set the category for ticket channels").addChannelOption((option) => option.setName("category").setDescription("Category to create tickets in").setRequired(true)),
   async execute(interaction) {
     const category = interaction.options.getChannel("category");
     if (!category || category.type !== 4) {
@@ -58172,9 +58251,9 @@ var ticketcategory_default = {
   }
 };
 // src/commands/setup/roles.ts
-var import_discord6 = __toESM(require_src(), 1);
+var import_discord7 = __toESM(require_src(), 1);
 var roles_default = {
-  data: new import_discord6.SlashCommandSubcommandBuilder().setName("roles").setDescription("Manage admin and support roles").addStringOption((option) => option.setName("type").setDescription("Role type to manage").setRequired(true).addChoices({ name: "Admin", value: "admin" }, { name: "Support", value: "support" })).addStringOption((option) => option.setName("action").setDescription("Add or remove role").setRequired(true).addChoices({ name: "Add", value: "add" }, { name: "Remove", value: "remove" }, { name: "List", value: "list" })).addRoleOption((option) => option.setName("role").setDescription("Role to add or remove").setRequired(false)),
+  data: new import_discord7.SlashCommandSubcommandBuilder().setName("roles").setDescription("Manage admin and support roles").addStringOption((option) => option.setName("type").setDescription("Role type to manage").setRequired(true).addChoices({ name: "Admin", value: "admin" }, { name: "Support", value: "support" })).addStringOption((option) => option.setName("action").setDescription("Add or remove role").setRequired(true).addChoices({ name: "Add", value: "add" }, { name: "Remove", value: "remove" }, { name: "List", value: "list" })).addRoleOption((option) => option.setName("role").setDescription("Role to add or remove").setRequired(false)),
   async execute(interaction) {
     const type = interaction.options.getString("type");
     const action = interaction.options.getString("action");
@@ -58228,9 +58307,37 @@ ${roleList}`, ephemeral: true });
     }
   }
 };
+// src/commands/setup/permissions.ts
+var import_discord8 = __toESM(require_src(), 1);
+var permissions_default = {
+  data: new import_discord8.SlashCommandSubcommandBuilder().setName("permissions").setDescription("Configure ticket permissions").addStringOption((option) => option.setName("setting").setDescription("Permission setting to configure").setRequired(true).addChoices({ name: "User Can Close", value: "userCanClose" })).addStringOption((option) => option.setName("value").setDescription("Set value").setRequired(true).addChoices({ name: "Enable", value: "true" }, { name: "Disable", value: "false" })).addStringOption((option) => option.setName("view").setDescription("View current settings").setRequired(false).addChoices({ name: "Yes", value: "yes" }, { name: "No", value: "no" })),
+  async execute(interaction) {
+    const view = interaction.options.getString("view");
+    const settings = dataManager.getSettings();
+    if (view === "yes") {
+      const permissionsList = `
+**Current Ticket Permissions:**
+━━━━━━━━━━━━━━━━━━
+• User Can Close: ${settings.userCanClose ? "✅ Enabled" : "❌ Disabled"}
+`;
+      await interaction.reply({ content: permissionsList, ephemeral: true });
+      return;
+    }
+    const setting = interaction.options.getString("setting");
+    const value = interaction.options.getString("value");
+    if (setting === "userCanClose") {
+      const newValue = value === "true";
+      dataManager.updateSettings({ userCanClose: newValue });
+      await interaction.reply({
+        content: `User can close tickets has been **${newValue ? "enabled" : "disabled"}**.`,
+        ephemeral: true
+      });
+    }
+  }
+};
 // src/commands/setupCommand.ts
 var setupCommand_default = {
-  data: new import_discord7.SlashCommandBuilder().setName("setup").setDescription("Setup the ticket bot").addSubcommand(tags_default.data).addSubcommand(ticketchannel_default.data).addSubcommand(ticketcategory_default.data).addSubcommand(roles_default.data),
+  data: new import_discord9.SlashCommandBuilder().setName("setup").setDescription("Setup ticket bot").addSubcommand(tags_default.data).addSubcommand(ticketchannel_default.data).addSubcommand(ticketcategory_default.data).addSubcommand(roles_default.data).addSubcommand(permissions_default.data),
   async execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
     switch (subcommand) {
@@ -58246,12 +58353,15 @@ var setupCommand_default = {
       case "roles":
         await roles_default.execute(interaction);
         break;
+      case "permissions":
+        await permissions_default.execute(interaction);
+        break;
     }
   }
 };
 
 // src/commands/ticket/close.ts
-var import_discord8 = __toESM(require_src(), 1);
+var import_discord10 = __toESM(require_src(), 1);
 
 // src/utils/permissionChecks.ts
 function isAdmin(member) {
@@ -58280,7 +58390,13 @@ function canCloseTicket(interaction, ticketUserId) {
     return false;
   const member = interaction.member;
   const isTicketCreator = member.id === ticketUserId;
-  return isAdmin(member) || isSupport(member) || isTicketCreator;
+  const settings = dataManager.getSettings();
+  const userCanClose = settings.userCanClose;
+  if (isAdmin(member) || isSupport(member))
+    return true;
+  if (isTicketCreator && userCanClose)
+    return true;
+  return false;
 }
 function hasAdminOrSupport(interaction) {
   if (!interaction.member || !("roles" in interaction.member))
@@ -58291,7 +58407,7 @@ function hasAdminOrSupport(interaction) {
 
 // src/commands/ticket/close.ts
 var close_default = {
-  data: new import_discord8.SlashCommandBuilder().setName("close").setDescription("Close the current ticket"),
+  data: new import_discord10.SlashCommandBuilder().setName("close").setDescription("Close the current ticket"),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
@@ -58303,36 +58419,58 @@ var close_default = {
       await interaction.reply({ content: "You do not have permission to close this ticket.", ephemeral: true });
       return;
     }
+    const permissions = channel.permissionsFor(interaction.client.user);
+    if (!permissions || !permissions.has("ViewChannel") || !permissions.has("ReadMessageHistory")) {
+      await interaction.reply({
+        content: "I do not have permission to access this channel. Please contact an administrator.",
+        ephemeral: true
+      });
+      return;
+    }
     await interaction.deferReply();
-    const transcript = await generateTranscript(channel, ticket.id, ticket.userId);
-    const filepath = saveTranscriptToFile(transcript);
-    dataManager.addTranscript(transcript);
-    dataManager.updateTicket(ticket.id, { status: "closed", transcript: filepath });
+    let transcript;
+    let filepath;
     try {
-      const user = await interaction.client.users.fetch(ticket.userId);
-      await user.send({
-        content: `Your ticket **${ticket.id}** has been closed.
+      transcript = await generateTranscript(channel, ticket.id, ticket.userId);
+      filepath = saveTranscriptToFile(transcript);
+      dataManager.addTranscript(transcript);
+      dataManager.updateTicket(ticket.id, { status: "closed", transcript: filepath });
+      try {
+        const user = await interaction.client.users.fetch(ticket.userId);
+        await user.send({
+          content: `Your ticket **${ticket.id}** has been closed.
 
 Here is a transcript of your conversation:`,
-        files: [filepath]
+          files: [filepath]
+        });
+      } catch (error) {
+        console.error("Failed to send transcript to user:", error);
+      }
+      await channel.send({
+        content: `Ticket has been closed by ${interaction.user.username}.
+Transcript has been saved and sent to the ticket creator.`
       });
     } catch (error) {
-      console.error("Failed to send transcript to user:", error);
+      console.error("Failed to generate transcript:", error);
+      await channel.send({
+        content: `Ticket has been closed by ${interaction.user.username}.
+Failed to save transcript due to permission issues.`
+      });
     }
-    await channel.send({
-      content: `Ticket has been closed by ${interaction.user.username}.
-Transcript has been saved and sent to the ticket creator.`
-    });
-    await channel.delete();
+    try {
+      await channel.delete();
+    } catch (error) {
+      console.error("Failed to delete channel:", error);
+    }
     dataManager.deleteTicket(ticket.id);
     await interaction.followUp({ content: "Ticket closed successfully.", ephemeral: true });
   }
 };
 
 // src/commands/ticket/claim.ts
-var import_discord9 = __toESM(require_src(), 1);
+var import_discord11 = __toESM(require_src(), 1);
 var claim_default = {
-  data: new import_discord9.SlashCommandBuilder().setName("claim").setDescription("Claim the current ticket"),
+  data: new import_discord11.SlashCommandBuilder().setName("claim").setDescription("Claim the current ticket"),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
@@ -58356,6 +58494,7 @@ var claim_default = {
       status: "claimed",
       claimedBy: interaction.user.id
     });
+    await updateTicketEmbed(interaction.client, ticket);
     await interaction.reply({
       content: `Ticket has been claimed by ${interaction.user.username}.`
     });
@@ -58363,9 +58502,9 @@ var claim_default = {
 };
 
 // src/commands/ticket/adduser.ts
-var import_discord10 = __toESM(require_src(), 1);
+var import_discord12 = __toESM(require_src(), 1);
 var adduser_default = {
-  data: new import_discord10.SlashCommandBuilder().setName("adduser").setDescription("Add a user to the ticket").addUserOption((option) => option.setName("user").setDescription("User to add").setRequired(true)),
+  data: new import_discord12.SlashCommandBuilder().setName("adduser").setDescription("Add a user to the ticket").addUserOption((option) => option.setName("user").setDescription("User to add").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
@@ -58389,9 +58528,9 @@ var adduser_default = {
 };
 
 // src/commands/ticket/removeuser.ts
-var import_discord11 = __toESM(require_src(), 1);
+var import_discord13 = __toESM(require_src(), 1);
 var removeuser_default = {
-  data: new import_discord11.SlashCommandBuilder().setName("removeuser").setDescription("Remove a user from the ticket").addUserOption((option) => option.setName("user").setDescription("User to remove").setRequired(true)),
+  data: new import_discord13.SlashCommandBuilder().setName("removeuser").setDescription("Remove a user from the ticket").addUserOption((option) => option.setName("user").setDescription("User to remove").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
@@ -58419,9 +58558,9 @@ var removeuser_default = {
 };
 
 // src/commands/ticket/rename.ts
-var import_discord12 = __toESM(require_src(), 1);
+var import_discord14 = __toESM(require_src(), 1);
 var rename_default = {
-  data: new import_discord12.SlashCommandBuilder().setName("rename").setDescription("Rename the ticket channel").addStringOption((option) => option.setName("name").setDescription("New channel name").setRequired(true)),
+  data: new import_discord14.SlashCommandBuilder().setName("rename").setDescription("Rename the ticket channel").addStringOption((option) => option.setName("name").setDescription("New channel name").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
@@ -58446,9 +58585,9 @@ var rename_default = {
 };
 
 // src/commands/ticket/transcript.ts
-var import_discord13 = __toESM(require_src(), 1);
+var import_discord15 = __toESM(require_src(), 1);
 var transcript_default = {
-  data: new import_discord13.SlashCommandBuilder().setName("transcript").setDescription("Generate and send the ticket transcript"),
+  data: new import_discord15.SlashCommandBuilder().setName("transcript").setDescription("Generate and send the ticket transcript"),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = dataManager.getTicketByChannelId(channel.id);
@@ -58493,13 +58632,13 @@ if (!TOKEN || !CLIENT_ID) {
   console.error("Missing required environment variables");
   process.exit(1);
 }
-var client = new import_discord14.Client({
+var client = new import_discord16.Client({
   intents: [
-    import_discord14.GatewayIntentBits.Guilds,
-    import_discord14.GatewayIntentBits.GuildMessages,
-    import_discord14.GatewayIntentBits.MessageContent
+    import_discord16.GatewayIntentBits.Guilds,
+    import_discord16.GatewayIntentBits.GuildMessages,
+    import_discord16.GatewayIntentBits.MessageContent
   ],
-  partials: [import_discord14.Partials.Channel]
+  partials: [import_discord16.Partials.Channel]
 });
 var commands = [
   setupCommand_default.data.toJSON(),
@@ -58511,16 +58650,16 @@ var commands = [
   transcript_default.data.toJSON()
 ];
 async function registerCommands() {
-  const rest = new import_discord14.REST({ version: "10" }).setToken(TOKEN);
+  const rest = new import_discord16.REST({ version: "10" }).setToken(TOKEN);
   try {
     console.log("Started refreshing application (/) commands.");
-    await rest.put(import_discord14.Routes.applicationCommands(CLIENT_ID), { body: commands });
+    await rest.put(import_discord16.Routes.applicationCommands(CLIENT_ID), { body: commands });
     console.log("Successfully reloaded application (/) commands.");
   } catch (error) {
     console.error("Error registering commands:", error);
   }
 }
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
   await registerCommands();
   startInactivityCheck(client);

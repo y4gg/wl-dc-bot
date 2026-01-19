@@ -1,4 +1,5 @@
 .env
 output.txt
+data/tickets.json
+data/transcripts/
 !data/transcripts/.gitkeep
-data/
