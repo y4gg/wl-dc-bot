@@ -9,7 +9,8 @@ export default {
     .addSubcommand(setupCommands.ticketchannel.data)
     .addSubcommand(setupCommands.ticketcategory.data)
     .addSubcommand(setupCommands.roles.data)
-    .addSubcommand(setupCommands.permissions.data),
+    .addSubcommand(setupCommands.permissions.data)
+    .addSubcommand(setupCommands.formchannel.data),
 
   async execute(interaction: any) {
     const subcommand = interaction.options.getSubcommand();
@@ -29,6 +30,9 @@ export default {
         break;
       case 'permissions':
         await setupCommands.permissions.execute(interaction);
+        break;
+      case 'formchannel':
+        await setupCommands.formchannel.execute(interaction);
         break;
     }
   }

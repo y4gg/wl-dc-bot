@@ -6,6 +6,8 @@ import { join } from 'path';
 import { handleCreateTicket } from './handlers/buttonHandler';
 import { handleTagSelection } from './handlers/selectMenuHandler';
 import { startInactivityCheck } from './handlers/inactivityHandler';
+import { handleFormSubmitButton } from './handlers/formHandler';
+import { handleFormModalSubmit } from './handlers/modalSubmitHandler';
 import setupCommand from './commands/setupCommand';
 import closeCommand from './commands/ticket/close';
 import claimCommand from './commands/ticket/claim';
@@ -13,6 +15,7 @@ import adduserCommand from './commands/ticket/adduser';
 import removeuserCommand from './commands/ticket/removeuser';
 import renameCommand from './commands/ticket/rename';
 import transcriptCommand from './commands/ticket/transcript';
+import formCreateCommand from './commands/form/create';
 
 config();
 
@@ -40,7 +43,8 @@ const commands = [
   adduserCommand.data.toJSON(),
   removeuserCommand.data.toJSON(),
   renameCommand.data.toJSON(),
-  transcriptCommand.data.toJSON()
+  transcriptCommand.data.toJSON(),
+  formCreateCommand.data.toJSON()
 ];
 
 async function registerCommands() {
@@ -81,10 +85,16 @@ client.on('interactionCreate', async interaction => {
         await closeCommand.execute(interaction);
       } else if (interaction.customId === 'claim_ticket') {
         await claimCommand.execute(interaction);
+      } else if (interaction.customId.startsWith('submit_form_')) {
+        await handleFormSubmitButton(interaction);
       }
     } else if (interaction.isStringSelectMenu()) {
       if (interaction.customId === 'select_tag') {
         await handleTagSelection(interaction);
+      }
+    } else if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith('form_modal_')) {
+        await handleFormModalSubmit(interaction);
       }
     } else if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
@@ -110,6 +120,9 @@ client.on('interactionCreate', async interaction => {
           break;
         case 'transcript':
           await transcriptCommand.execute(interaction);
+          break;
+        case 'create':
+          await formCreateCommand.execute(interaction);
           break;
       }
     }

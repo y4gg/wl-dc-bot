@@ -12,6 +12,9 @@ A feature-rich Discord ticket bot built with TypeScript, Bun, and discord.js.
 - 👥 Add/remove users from tickets
 - ✏️ Rename ticket channels
 - 📊 Generate transcripts on demand
+- 📋 Custom forms with text and select questions
+- 🔤 Modal-based form submissions
+- 🎯 One submission per user per form
 
 ## Setup
 
@@ -77,6 +80,10 @@ Use `/setup` to configure your ticket bot:
   - Add or remove admin/support roles
   - List configured roles
 
+- `/setup formchannel` - Set form submissions channel
+  - Select a channel where form submissions are sent
+  - Required before forms can be created
+
 ### Ticket Commands
 
 Available in ticket channels:
@@ -101,6 +108,18 @@ Available in ticket channels:
 - `/transcript` - Generate and send transcript
   - Creates transcript and sends to user
 
+### Form Commands
+
+- `/create` - Create a new form (Admin only)
+  - Set form name
+  - Define questions (comma-separated)
+  - Select destination channel
+  - Add optional message to display with form
+
+Question format examples:
+- `What is your name?` → Short text input
+- `Describe your issue in detail:` → Long text input (auto-detected for questions over 50 characters)
+
 ## Workflow
 
 1. **Initial Setup**
@@ -108,6 +127,7 @@ Available in ticket channels:
    - Use `/setup ticketcategory` to set where tickets are created
    - Use `/setup roles` to configure admin/support roles
    - Use `/setup ticketchannel` to send the Create Ticket button
+   - Use `/setup formchannel` to set form submission channel (optional)
 
 2. **User Creates Ticket**
    - User clicks "Create Ticket" button
@@ -123,6 +143,13 @@ Available in ticket channels:
    - Use `/close` to close ticket
    - Transcript is automatically generated and sent to user
    - Channel is deleted
+
+5. **Form Workflow**
+   - Admin creates form with `/create`
+   - Form is sent to specified channel with "Submit Form" button
+   - Users click button to open modal with questions
+   - Submissions are sent to configured form channel
+   - Each user can only submit once per form
 
 ## Auto-Close Feature
 
@@ -141,10 +168,13 @@ Data is stored in separate files for better security:
   - Admin and support roles
   - Auto-close settings
   - User close permissions
+  - Form submission channel ID
 
-- `data/tickets.json` - Ticket data (local only, not in git)
+- `data/tickets.json` - Ticket and form data (local only, not in git)
   - Active tickets
   - Ticket transcripts metadata
+  - Active forms
+  - Form submission tracking
 
 Transcript files are saved in `data/transcripts/` directory (local only, not in git).
 
@@ -183,6 +213,12 @@ Transcript files are saved in `data/transcripts/` directory (local only, not in 
 - Check bot has sufficient permissions
 - Verify `data/tickets.json` is being saved properly (check file write permissions)
 - Check console for error messages
+
+### Forms not working
+- Ensure form channel is set with `/setup formchannel`
+- Verify admin role is configured before creating forms
+- Check bot has permission to send messages in form channel
+- Modal has limit of 5 questions max
 
 ## Development
 

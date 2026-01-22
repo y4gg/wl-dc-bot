@@ -21,12 +21,14 @@ export interface TicketSettings {
   supportRoles: string[];
   autoCloseHours: number;
   userCanClose: boolean;
+  formChannelId?: string;
 }
 
 export interface BotData {
   settings: TicketSettings;
   tickets: Ticket[];
   transcripts: Transcript[];
+  forms: Form[];
 }
 
 export interface Transcript {
@@ -53,4 +55,30 @@ export interface ButtonInteraction {
 
 export interface CommandOptions {
   [key: string]: any;
+}
+
+export interface FormQuestion {
+  label: string;
+  type: 'short' | 'long';
+}
+
+export interface Form {
+  id: string;
+  name: string;
+  description: string;
+  questions: FormQuestion[];
+  channelId: string;
+  messageId?: string;
+  creatorId: string;
+  createdAt: number;
+  submittedBy: string[];
+}
+
+export interface FormSubmission {
+  formId: string;
+  formName: string;
+  userId: string;
+  userName: string;
+  responses: Record<string, string>;
+  submittedAt: number;
 }

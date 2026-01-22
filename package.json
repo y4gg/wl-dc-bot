@@ -1,7 +1,7 @@
 {
   "name": "wl-dc-bot",
   "version": "1.0.0",
-  "description": "Discord ticket bot with tags, transcripts, and auto-close functionality",
+  "description": "Discord ticket bot with tags, transcripts, auto-close, and forms functionality",
   "scripts": {
     "start": "bun run dist/index.js",
     "dev": "bun run src/index.ts",
