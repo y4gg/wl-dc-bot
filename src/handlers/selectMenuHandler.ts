@@ -4,7 +4,7 @@ import { createTicketEmbed, getTicketButtons } from '../utils/ticketEmbed';
 
 export async function handleTagSelection(interaction: StringSelectMenuInteraction) {
   const selectedTag = interaction.values[0];
-  const settings = dataManager.getSettings();
+  const settings = await dataManager.getSettings();
 
   if (!settings.categoryId) {
     await interaction.reply({ 
@@ -58,7 +58,7 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
       ]
     });
 
-    const ticket = dataManager.createTicket({
+    const ticket = await dataManager.createTicket({
       channelId: ticketChannel.id,
       userId: interaction.user.id,
       userName: interaction.user.username,
@@ -74,7 +74,7 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
       components: [buttons]
     });
 
-    dataManager.updateTicket(ticket.id, { embedMessageId: embedMessage.id });
+    await dataManager.updateTicket(ticket.id, { embedMessageId: embedMessage.id });
 
     await ticketChannel.send({
       content: `Welcome, ${interaction.user}! Your ticket has been created with the tag: **${selectedTag}**\n\nPlease describe your issue and our support team will be with you shortly.`

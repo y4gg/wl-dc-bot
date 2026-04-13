@@ -6,14 +6,19 @@
     "start": "bun run dist/index.js",
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node",
-    "register-commands": "bun run src/utils/registerCommands.ts"
+    "register-commands": "bun run src/utils/registerCommands.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio --config drizzle.config.ts"
   },
   "keywords": ["discord", "ticket", "bot"],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

@@ -34,7 +34,7 @@ export default {
 
   async execute(interaction: any) {
     const view = interaction.options.getString('view');
-    const settings = dataManager.getSettings();
+    const settings = await dataManager.getSettings();
 
     if (view === 'yes') {
       const permissionsList = `
@@ -52,7 +52,7 @@ export default {
 
     if (setting === 'userCanClose') {
       const newValue = value === 'true';
-      dataManager.updateSettings({ userCanClose: newValue });
+      await dataManager.updateSettings({ userCanClose: newValue });
       
       await interaction.reply({ 
         content: `User can close tickets has been **${newValue ? 'enabled' : 'disabled'}**.`, 

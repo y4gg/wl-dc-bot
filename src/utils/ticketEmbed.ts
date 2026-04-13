@@ -1,6 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, TextChannel } from 'discord.js';
-import { Ticket } from '../types';
-import { dataManager } from '../models/DataManager';
+import { Ticket, TicketSettings } from '../types';
 
 export function createTicketEmbed(ticket: Ticket): EmbedBuilder {
   const embed = new EmbedBuilder()
@@ -27,7 +26,7 @@ export function createTicketEmbed(ticket: Ticket): EmbedBuilder {
   return embed;
 }
 
-export function getTicketButtons(ticket: Ticket, settings: any): ActionRowBuilder<ButtonBuilder> {
+export function getTicketButtons(ticket: Ticket, _settings: TicketSettings): ActionRowBuilder<ButtonBuilder> {
   const closeButton = new ButtonBuilder()
     .setCustomId('close_ticket')
     .setLabel('Close Ticket')
@@ -47,13 +46,13 @@ export function getTicketButtons(ticket: Ticket, settings: any): ActionRowBuilde
 
 export async function updateTicketEmbed(
   client: Client, 
-  ticket: Ticket
+  ticket: Ticket,
+  settings: TicketSettings
 ): Promise<void> {
   try {
     const channel = await client.channels.fetch(ticket.channelId) as TextChannel;
     if (!channel || !ticket.embedMessageId) return;
 
-    const settings = dataManager.getSettings();
     const embed = createTicketEmbed(ticket);
     const buttons = getTicketButtons(ticket, settings);
 

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import * as setupCommands from './setup';
 
 export default {

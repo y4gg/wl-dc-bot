@@ -10,14 +10,14 @@ export default {
 
   async execute(interaction: any) {
     const channel = interaction.channel;
-    const ticket = dataManager.getTicketByChannelId(channel.id);
+    const ticket = await dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
       await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
-    if (!canCloseTicket(interaction, ticket.userId)) {
+    if (!await canCloseTicket(interaction, ticket.userId)) {
       await interaction.reply({ content: 'You do not have permission to close this ticket.', flags: [MessageFlags.Ephemeral] });
       return;
     }
@@ -39,8 +39,8 @@ export default {
     try {
       transcript = await generateTranscript(channel as any, ticket.id, ticket.userId);
       filepath = saveTranscriptToFile(transcript);
-      dataManager.addTranscript(transcript);
-      dataManager.updateTicket(ticket.id, { status: 'closed', transcript: filepath });
+      await dataManager.addTranscript(transcript);
+      await dataManager.updateTicket(ticket.id, { status: 'closed', transcript: filepath });
 
       try {
         const user = await interaction.client.users.fetch(ticket.userId);
@@ -68,6 +68,6 @@ export default {
       console.error('Failed to delete channel:', error);
     }
     
-    dataManager.deleteTicket(ticket.id);
+    await dataManager.deleteTicket(ticket.id);
   }
 };

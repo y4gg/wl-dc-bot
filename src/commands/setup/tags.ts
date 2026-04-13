@@ -35,7 +35,7 @@ export default {
     const tag = interaction.options.getString('tag');
     const list = interaction.options.getString('list');
 
-    const settings = dataManager.getSettings();
+    const settings = await dataManager.getSettings();
 
     if (list === 'yes') {
       if (settings.tags.length === 0) {
@@ -49,7 +49,7 @@ export default {
     }
 
     if (action === 'clear') {
-      dataManager.updateSettings({ tags: [] });
+      await dataManager.updateSettings({ tags: [] });
       await interaction.reply({ content: 'All tags have been cleared.', flags: [MessageFlags.Ephemeral] });
       return;
     }
@@ -66,7 +66,7 @@ export default {
       }
       
       const newTags = [...settings.tags, tag];
-      dataManager.updateSettings({ tags: newTags });
+      await dataManager.updateSettings({ tags: newTags });
       await interaction.reply({ content: `Tag "${tag}" has been added.`, flags: [MessageFlags.Ephemeral] });
     } else if (action === 'remove') {
       if (!settings.tags.includes(tag)) {
@@ -75,7 +75,7 @@ export default {
       }
       
       const newTags = settings.tags.filter(t => t !== tag);
-      dataManager.updateSettings({ tags: newTags });
+      await dataManager.updateSettings({ tags: newTags });
       await interaction.reply({ content: `Tag "${tag}" has been removed.`, flags: [MessageFlags.Ephemeral] });
     }
   }

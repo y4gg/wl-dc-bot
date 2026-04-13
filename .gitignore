@@ -3,3 +3,6 @@ settings.json
 output.txt
 data/
 AGENTS.md
+node_modules/
+dist/
+dist/index.js

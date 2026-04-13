@@ -19,7 +19,7 @@ export default {
       return;
     }
 
-    dataManager.updateSettings({ categoryId: category.id });
+    await dataManager.updateSettings({ categoryId: category.id });
     await interaction.reply({ content: `Ticket category has been set to **${category.name}**.`, flags: [MessageFlags.Ephemeral] });
   }
 };

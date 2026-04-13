@@ -14,14 +14,14 @@ export default {
 
   async execute(interaction: any) {
     const channel = interaction.channel;
-    const ticket = dataManager.getTicketByChannelId(channel.id);
+    const ticket = await dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
       await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
-    if (!hasAdminOrSupport(interaction)) {
+    if (!await hasAdminOrSupport(interaction)) {
       await interaction.reply({ content: 'You do not have permission to add users to tickets.', flags: [MessageFlags.Ephemeral] });
       return;
     }

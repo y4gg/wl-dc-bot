@@ -60,6 +60,12 @@ async function registerCommands() {
   }
 }
 
+async function main() {
+  await dataManager.init();
+
+  client.login(TOKEN);
+}
+
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
   
@@ -127,10 +133,13 @@ client.on('interactionCreate', async interaction => {
 client.on('messageCreate', async message => {
   if (message.author.bot || !message.guild) return;
 
-  const ticket = dataManager.getTicketByChannelId(message.channelId);
+  const ticket = await dataManager.getTicketByChannelId(message.channelId);
   if (ticket) {
-    dataManager.updateTicketActivity(message.channelId);
+    await dataManager.updateTicketActivity(message.channelId);
   }
 });
 
-client.login(TOKEN);
+main().catch(error => {
+  console.error('Failed to initialize application:', error);
+  process.exit(1);
+});
