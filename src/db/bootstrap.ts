@@ -17,7 +17,9 @@ const DEFAULT_SETTINGS: TicketSettings = {
   adminRoles: [],
   supportRoles: [],
   autoCloseHours: 24,
-  userCanClose: true
+  userCanClose: true,
+  maxOpenTicketsPerUser: 1,
+  bannedUserIds: []
 };
 
 interface LegacySettingsFile {
@@ -42,7 +44,11 @@ function sanitizeSettings(settingsInput?: Partial<TicketSettings>): TicketSettin
     adminRoles: isStringArray(settingsInput?.adminRoles) ? settingsInput.adminRoles : [],
     supportRoles: isStringArray(settingsInput?.supportRoles) ? settingsInput.supportRoles : [],
     autoCloseHours: typeof settingsInput?.autoCloseHours === 'number' ? settingsInput.autoCloseHours : 24,
-    userCanClose: typeof settingsInput?.userCanClose === 'boolean' ? settingsInput.userCanClose : true
+    userCanClose: typeof settingsInput?.userCanClose === 'boolean' ? settingsInput.userCanClose : true,
+    maxOpenTicketsPerUser: typeof settingsInput?.maxOpenTicketsPerUser === 'number' && settingsInput.maxOpenTicketsPerUser >= 1
+      ? Math.floor(settingsInput.maxOpenTicketsPerUser)
+      : 1,
+    bannedUserIds: isStringArray(settingsInput?.bannedUserIds) ? settingsInput.bannedUserIds : []
   };
 }
 
@@ -58,7 +64,9 @@ function settingsMatchDefault(currentSettings: typeof settings.$inferSelect | un
     && currentSettings.adminRolesJson === JSON.stringify(DEFAULT_SETTINGS.adminRoles)
     && currentSettings.supportRolesJson === JSON.stringify(DEFAULT_SETTINGS.supportRoles)
     && currentSettings.autoCloseHours === DEFAULT_SETTINGS.autoCloseHours
-    && currentSettings.userCanClose === DEFAULT_SETTINGS.userCanClose;
+    && currentSettings.userCanClose === DEFAULT_SETTINGS.userCanClose
+    && currentSettings.maxOpenTicketsPerUser === DEFAULT_SETTINGS.maxOpenTicketsPerUser
+    && currentSettings.bannedUserIdsJson === JSON.stringify(DEFAULT_SETTINGS.bannedUserIds);
 }
 
 async function ensureDefaultSettingsRow(): Promise<void> {
@@ -71,7 +79,9 @@ async function ensureDefaultSettingsRow(): Promise<void> {
     adminRolesJson: JSON.stringify(DEFAULT_SETTINGS.adminRoles),
     supportRolesJson: JSON.stringify(DEFAULT_SETTINGS.supportRoles),
     autoCloseHours: DEFAULT_SETTINGS.autoCloseHours,
-    userCanClose: DEFAULT_SETTINGS.userCanClose
+    userCanClose: DEFAULT_SETTINGS.userCanClose,
+    maxOpenTicketsPerUser: DEFAULT_SETTINGS.maxOpenTicketsPerUser,
+    bannedUserIdsJson: JSON.stringify(DEFAULT_SETTINGS.bannedUserIds)
   }).onConflictDoNothing().run();
 }
 
@@ -112,7 +122,9 @@ async function importLegacyDataIfNeeded(): Promise<void> {
       adminRolesJson: JSON.stringify(importedSettings.adminRoles),
       supportRolesJson: JSON.stringify(importedSettings.supportRoles),
       autoCloseHours: importedSettings.autoCloseHours,
-      userCanClose: importedSettings.userCanClose
+      userCanClose: importedSettings.userCanClose,
+      maxOpenTicketsPerUser: importedSettings.maxOpenTicketsPerUser,
+      bannedUserIdsJson: JSON.stringify(importedSettings.bannedUserIds)
     }).onConflictDoUpdate({
       target: settings.id,
       set: {
@@ -123,7 +135,9 @@ async function importLegacyDataIfNeeded(): Promise<void> {
         adminRolesJson: JSON.stringify(importedSettings.adminRoles),
         supportRolesJson: JSON.stringify(importedSettings.supportRoles),
         autoCloseHours: importedSettings.autoCloseHours,
-        userCanClose: importedSettings.userCanClose
+        userCanClose: importedSettings.userCanClose,
+        maxOpenTicketsPerUser: importedSettings.maxOpenTicketsPerUser,
+        bannedUserIdsJson: JSON.stringify(importedSettings.bannedUserIds)
       }
     }).run();
 

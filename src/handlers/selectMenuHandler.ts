@@ -2,6 +2,14 @@ import { StringSelectMenuInteraction, ChannelType, PermissionFlagsBits, MessageF
 import { dataManager } from '../models/DataManager';
 import { createTicketEmbed, getTicketButtons } from '../utils/ticketEmbed';
 
+function getTicketBanMessage(): string {
+  return 'You are banned from opening tickets on this bot. Please contact an administrator if you believe this is a mistake.';
+}
+
+function getTicketLimitMessage(limit: number): string {
+  return `You have reached the open ticket limit (**${limit}**). Please close one of your existing tickets before opening another.`;
+}
+
 export async function handleTagSelection(interaction: StringSelectMenuInteraction) {
   const selectedTag = interaction.values[0];
   const settings = await dataManager.getSettings();
@@ -27,6 +35,23 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
 
   await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
+  const freshSettings = await dataManager.getSettings();
+
+  if (freshSettings.bannedUserIds.includes(interaction.user.id)) {
+    await interaction.editReply({
+      content: getTicketBanMessage()
+    });
+    return;
+  }
+
+  const openTickets = await dataManager.getOpenTicketsByUser(interaction.user.id);
+  if (openTickets.length >= freshSettings.maxOpenTicketsPerUser) {
+    await interaction.editReply({
+      content: getTicketLimitMessage(freshSettings.maxOpenTicketsPerUser)
+    });
+    return;
+  }
+
   const channelName = `ticket-${interaction.user.username}-${Date.now().toString().slice(-4)}`;
   
   try {
@@ -47,11 +72,11 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
           id: interaction.user.id,
           allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory', 'AttachFiles', 'EmbedLinks']
         },
-        ...settings.adminRoles.map(roleId => ({
+        ...freshSettings.adminRoles.map(roleId => ({
           id: roleId,
           allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory', 'ManageMessages']
         })),
-        ...settings.supportRoles.map(roleId => ({
+        ...freshSettings.supportRoles.map(roleId => ({
           id: roleId,
           allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory', 'ManageMessages']
         }))
@@ -67,7 +92,7 @@ export async function handleTagSelection(interaction: StringSelectMenuInteractio
     });
 
     const embed = createTicketEmbed(ticket);
-    const buttons = getTicketButtons(ticket, settings);
+    const buttons = getTicketButtons(ticket, freshSettings);
 
     const embedMessage = await ticketChannel.send({
       embeds: [embed],

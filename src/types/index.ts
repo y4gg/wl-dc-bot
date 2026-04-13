@@ -21,6 +21,8 @@ export interface TicketSettings {
   supportRoles: string[];
   autoCloseHours: number;
   userCanClose: boolean;
+  maxOpenTicketsPerUser: number;
+  bannedUserIds: string[];
 }
 
 export interface BotData {

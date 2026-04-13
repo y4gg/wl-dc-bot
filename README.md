@@ -5,6 +5,8 @@ A feature-rich Discord ticket bot built with TypeScript, Bun, and discord.js.
 ## Features
 
 - 🎫 Create tickets with customizable tags
+- 🚧 Configurable per-user open ticket limits
+- ⛔ Ticket bans for blocked users
 - 🔒 Permission-based access control (Admin/Support roles)
 - 📝 Automatic ticket transcripts on close
 - ⏰ Auto-close inactive tickets with warnings
@@ -77,6 +79,17 @@ Use `/setup` to configure your ticket bot:
   - Add or remove admin/support roles
   - List configured roles
 
+- `/setup permissions` - Manage boolean ticket permissions
+  - Configure whether users can close their own tickets
+
+- `/setup limit` - Configure per-user open ticket limits
+  - Set the maximum number of active tickets per user
+  - View the current limit
+
+- `/ticketban` - Manage ticket bans
+  - Add or remove users from creating tickets
+  - List banned users
+
 ### Ticket Commands
 
 Available in ticket channels:
@@ -107,10 +120,13 @@ Available in ticket channels:
    - Use `/setup tags` to add ticket categories
    - Use `/setup ticketcategory` to set where tickets are created
    - Use `/setup roles` to configure admin/support roles
+   - Use `/setup limit` to configure how many open tickets each user can have
+   - Use `/ticketban` to block specific users from creating tickets
    - Use `/setup ticketchannel` to send the Create Ticket button
 
 2. **User Creates Ticket**
    - User clicks "Create Ticket" button
+   - Bot checks whether the user is banned or already at their open-ticket limit
    - User selects a tag for their ticket
    - Ticket channel is created with proper permissions
 
@@ -176,6 +192,8 @@ Transcript files are saved in `data/transcripts/` directory (local only, not in 
 - Check that ticket category is set with `/setup ticketcategory`
 - Verify tags are configured with `/setup tags`
 - Ensure bot has permission to create channels and manage permissions
+- Confirm the user is not banned with `/ticketban`
+- Confirm the user has not reached the configured limit from `/setup limit`
 
 ### Auto-close not working
 - Check bot has sufficient permissions

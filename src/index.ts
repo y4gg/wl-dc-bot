@@ -13,6 +13,7 @@ import adduserCommand from './commands/ticket/adduser';
 import removeuserCommand from './commands/ticket/removeuser';
 import renameCommand from './commands/ticket/rename';
 import transcriptCommand from './commands/ticket/transcript';
+import ticketbanCommand from './commands/ticketban';
 
 config();
 
@@ -40,7 +41,8 @@ const commands = [
   adduserCommand.data.toJSON(),
   removeuserCommand.data.toJSON(),
   renameCommand.data.toJSON(),
-  transcriptCommand.data.toJSON()
+  transcriptCommand.data.toJSON(),
+  ticketbanCommand.data.toJSON()
 ];
 
 async function registerCommands() {
@@ -116,6 +118,9 @@ client.on('interactionCreate', async interaction => {
           break;
         case 'transcript':
           await transcriptCommand.execute(interaction);
+          break;
+        case 'ticketban':
+          await ticketbanCommand.execute(interaction);
           break;
       }
     }
