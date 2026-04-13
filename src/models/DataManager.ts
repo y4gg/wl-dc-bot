@@ -50,7 +50,9 @@ function mapSettingsRow(row: typeof settings.$inferSelect | undefined): TicketSe
     adminRoles: parseStringArray(row.adminRolesJson),
     supportRoles: parseStringArray(row.supportRolesJson),
     autoCloseHours: row.autoCloseHours,
-    userCanClose: row.userCanClose
+    userCanClose: row.userCanClose,
+    maxOpenTicketsPerUser: row.maxOpenTicketsPerUser,
+    bannedUserIds: parseStringArray(row.bannedUserIdsJson)
   };
 }
 
@@ -103,7 +105,9 @@ export class DataManager {
       adminRolesJson: JSON.stringify(merged.adminRoles),
       supportRolesJson: JSON.stringify(merged.supportRoles),
       autoCloseHours: merged.autoCloseHours,
-      userCanClose: merged.userCanClose
+      userCanClose: merged.userCanClose,
+      maxOpenTicketsPerUser: merged.maxOpenTicketsPerUser,
+      bannedUserIdsJson: JSON.stringify(merged.bannedUserIds)
     }).onConflictDoUpdate({
       target: settings.id,
       set: {
@@ -114,7 +118,9 @@ export class DataManager {
         adminRolesJson: JSON.stringify(merged.adminRoles),
         supportRolesJson: JSON.stringify(merged.supportRoles),
         autoCloseHours: merged.autoCloseHours,
-        userCanClose: merged.userCanClose
+        userCanClose: merged.userCanClose,
+        maxOpenTicketsPerUser: merged.maxOpenTicketsPerUser,
+        bannedUserIdsJson: JSON.stringify(merged.bannedUserIds)
       }
     }).run();
   }
@@ -137,6 +143,11 @@ export class DataManager {
   async getTicketsByUser(userId: string): Promise<Ticket[]> {
     const rows = db.select().from(tickets).where(eq(tickets.userId, userId)).all();
     return rows.map(mapTicketRow);
+  }
+
+  async getOpenTicketsByUser(userId: string): Promise<Ticket[]> {
+    const userTickets = await this.getTicketsByUser(userId);
+    return userTickets.filter(ticket => ticket.status !== 'closed');
   }
 
   async createTicket(ticket: Omit<Ticket, 'id' | 'createdAt' | 'lastActivity'>): Promise<Ticket> {

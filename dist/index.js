@@ -57754,7 +57754,7 @@ var require_main = __commonJS((exports, module) => {
 });
 
 // src/index.ts
-var import_discord16 = __toESM(require_src(), 1);
+var import_discord18 = __toESM(require_src(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 
 // node_modules/drizzle-orm/entity.js
@@ -61741,7 +61741,9 @@ var settings = sqliteTable("settings", {
   adminRolesJson: text("admin_roles_json").notNull().default("[]"),
   supportRolesJson: text("support_roles_json").notNull().default("[]"),
   autoCloseHours: integer("auto_close_hours").notNull().default(24),
-  userCanClose: integer("user_can_close", { mode: "boolean" }).notNull().default(true)
+  userCanClose: integer("user_can_close", { mode: "boolean" }).notNull().default(true),
+  maxOpenTicketsPerUser: integer("max_open_tickets_per_user").notNull().default(1),
+  bannedUserIdsJson: text("banned_user_ids_json").notNull().default("[]")
 });
 var tickets = sqliteTable("tickets", {
   id: text("id").primaryKey(),
@@ -61841,7 +61843,9 @@ var DEFAULT_SETTINGS = {
   adminRoles: [],
   supportRoles: [],
   autoCloseHours: 24,
-  userCanClose: true
+  userCanClose: true,
+  maxOpenTicketsPerUser: 1,
+  bannedUserIds: []
 };
 function isStringArray(value) {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -61855,14 +61859,16 @@ function sanitizeSettings(settingsInput) {
     adminRoles: isStringArray(settingsInput?.adminRoles) ? settingsInput.adminRoles : [],
     supportRoles: isStringArray(settingsInput?.supportRoles) ? settingsInput.supportRoles : [],
     autoCloseHours: typeof settingsInput?.autoCloseHours === "number" ? settingsInput.autoCloseHours : 24,
-    userCanClose: typeof settingsInput?.userCanClose === "boolean" ? settingsInput.userCanClose : true
+    userCanClose: typeof settingsInput?.userCanClose === "boolean" ? settingsInput.userCanClose : true,
+    maxOpenTicketsPerUser: typeof settingsInput?.maxOpenTicketsPerUser === "number" && settingsInput.maxOpenTicketsPerUser >= 1 ? Math.floor(settingsInput.maxOpenTicketsPerUser) : 1,
+    bannedUserIds: isStringArray(settingsInput?.bannedUserIds) ? settingsInput.bannedUserIds : []
   };
 }
 function settingsMatchDefault(currentSettings) {
   if (!currentSettings) {
     return true;
   }
-  return currentSettings.categoryId === DEFAULT_SETTINGS.categoryId && currentSettings.channelId === DEFAULT_SETTINGS.channelId && currentSettings.messageId === DEFAULT_SETTINGS.messageId && currentSettings.tagsJson === JSON.stringify(DEFAULT_SETTINGS.tags) && currentSettings.adminRolesJson === JSON.stringify(DEFAULT_SETTINGS.adminRoles) && currentSettings.supportRolesJson === JSON.stringify(DEFAULT_SETTINGS.supportRoles) && currentSettings.autoCloseHours === DEFAULT_SETTINGS.autoCloseHours && currentSettings.userCanClose === DEFAULT_SETTINGS.userCanClose;
+  return currentSettings.categoryId === DEFAULT_SETTINGS.categoryId && currentSettings.channelId === DEFAULT_SETTINGS.channelId && currentSettings.messageId === DEFAULT_SETTINGS.messageId && currentSettings.tagsJson === JSON.stringify(DEFAULT_SETTINGS.tags) && currentSettings.adminRolesJson === JSON.stringify(DEFAULT_SETTINGS.adminRoles) && currentSettings.supportRolesJson === JSON.stringify(DEFAULT_SETTINGS.supportRoles) && currentSettings.autoCloseHours === DEFAULT_SETTINGS.autoCloseHours && currentSettings.userCanClose === DEFAULT_SETTINGS.userCanClose && currentSettings.maxOpenTicketsPerUser === DEFAULT_SETTINGS.maxOpenTicketsPerUser && currentSettings.bannedUserIdsJson === JSON.stringify(DEFAULT_SETTINGS.bannedUserIds);
 }
 async function ensureDefaultSettingsRow() {
   db.insert(settings).values({
@@ -61874,7 +61880,9 @@ async function ensureDefaultSettingsRow() {
     adminRolesJson: JSON.stringify(DEFAULT_SETTINGS.adminRoles),
     supportRolesJson: JSON.stringify(DEFAULT_SETTINGS.supportRoles),
     autoCloseHours: DEFAULT_SETTINGS.autoCloseHours,
-    userCanClose: DEFAULT_SETTINGS.userCanClose
+    userCanClose: DEFAULT_SETTINGS.userCanClose,
+    maxOpenTicketsPerUser: DEFAULT_SETTINGS.maxOpenTicketsPerUser,
+    bannedUserIdsJson: JSON.stringify(DEFAULT_SETTINGS.bannedUserIds)
   }).onConflictDoNothing().run();
 }
 function readLegacyJson(filePath) {
@@ -61907,7 +61915,9 @@ async function importLegacyDataIfNeeded() {
       adminRolesJson: JSON.stringify(importedSettings.adminRoles),
       supportRolesJson: JSON.stringify(importedSettings.supportRoles),
       autoCloseHours: importedSettings.autoCloseHours,
-      userCanClose: importedSettings.userCanClose
+      userCanClose: importedSettings.userCanClose,
+      maxOpenTicketsPerUser: importedSettings.maxOpenTicketsPerUser,
+      bannedUserIdsJson: JSON.stringify(importedSettings.bannedUserIds)
     }).onConflictDoUpdate({
       target: settings.id,
       set: {
@@ -61918,7 +61928,9 @@ async function importLegacyDataIfNeeded() {
         adminRolesJson: JSON.stringify(importedSettings.adminRoles),
         supportRolesJson: JSON.stringify(importedSettings.supportRoles),
         autoCloseHours: importedSettings.autoCloseHours,
-        userCanClose: importedSettings.userCanClose
+        userCanClose: importedSettings.userCanClose,
+        maxOpenTicketsPerUser: importedSettings.maxOpenTicketsPerUser,
+        bannedUserIdsJson: JSON.stringify(importedSettings.bannedUserIds)
       }
     }).run();
     console.log(`Imported legacy settings from ${LEGACY_SETTINGS_PATH}`);
@@ -61999,7 +62011,9 @@ function mapSettingsRow(row) {
     adminRoles: parseStringArray(row.adminRolesJson),
     supportRoles: parseStringArray(row.supportRolesJson),
     autoCloseHours: row.autoCloseHours,
-    userCanClose: row.userCanClose
+    userCanClose: row.userCanClose,
+    maxOpenTicketsPerUser: row.maxOpenTicketsPerUser,
+    bannedUserIds: parseStringArray(row.bannedUserIdsJson)
   };
 }
 function mapTicketRow(row) {
@@ -62047,7 +62061,9 @@ class DataManager {
       adminRolesJson: JSON.stringify(merged.adminRoles),
       supportRolesJson: JSON.stringify(merged.supportRoles),
       autoCloseHours: merged.autoCloseHours,
-      userCanClose: merged.userCanClose
+      userCanClose: merged.userCanClose,
+      maxOpenTicketsPerUser: merged.maxOpenTicketsPerUser,
+      bannedUserIdsJson: JSON.stringify(merged.bannedUserIds)
     }).onConflictDoUpdate({
       target: settings.id,
       set: {
@@ -62058,7 +62074,9 @@ class DataManager {
         adminRolesJson: JSON.stringify(merged.adminRoles),
         supportRolesJson: JSON.stringify(merged.supportRoles),
         autoCloseHours: merged.autoCloseHours,
-        userCanClose: merged.userCanClose
+        userCanClose: merged.userCanClose,
+        maxOpenTicketsPerUser: merged.maxOpenTicketsPerUser,
+        bannedUserIdsJson: JSON.stringify(merged.bannedUserIds)
       }
     }).run();
   }
@@ -62077,6 +62095,10 @@ class DataManager {
   async getTicketsByUser(userId) {
     const rows = db.select().from(tickets).where(eq(tickets.userId, userId)).all();
     return rows.map(mapTicketRow);
+  }
+  async getOpenTicketsByUser(userId) {
+    const userTickets = await this.getTicketsByUser(userId);
+    return userTickets.filter((ticket) => ticket.status !== "closed");
   }
   async createTicket(ticket) {
     const now = Date.now();
@@ -62168,6 +62190,12 @@ import { join as join5 } from "path";
 
 // src/handlers/buttonHandler.ts
 var import_discord = __toESM(require_src(), 1);
+function getTicketBanMessage() {
+  return "You are banned from opening tickets on this bot. Please contact an administrator if you believe this is a mistake.";
+}
+function getTicketLimitMessage(limit) {
+  return `You have reached the open ticket limit (**${limit}**). Please close one of your existing tickets before opening another.`;
+}
 async function handleCreateTicket(interaction) {
   const settings2 = await dataManager.getSettings();
   if (!settings2.categoryId) {
@@ -62184,10 +62212,17 @@ async function handleCreateTicket(interaction) {
     });
     return;
   }
-  const existingTicket = (await dataManager.getTicketsByUser(interaction.user.id)).find((t) => t.status !== "closed");
-  if (existingTicket) {
+  if (settings2.bannedUserIds.includes(interaction.user.id)) {
     await interaction.reply({
-      content: `You already have an open ticket: **<#${existingTicket.channelId}>**`,
+      content: getTicketBanMessage(),
+      flags: [import_discord.MessageFlags.Ephemeral]
+    });
+    return;
+  }
+  const openTickets = await dataManager.getOpenTicketsByUser(interaction.user.id);
+  if (openTickets.length >= settings2.maxOpenTicketsPerUser) {
+    await interaction.reply({
+      content: getTicketLimitMessage(settings2.maxOpenTicketsPerUser),
       flags: [import_discord.MessageFlags.Ephemeral]
     });
     return;
@@ -62249,6 +62284,12 @@ async function updateTicketEmbed(client, ticket, settings2) {
 }
 
 // src/handlers/selectMenuHandler.ts
+function getTicketBanMessage2() {
+  return "You are banned from opening tickets on this bot. Please contact an administrator if you believe this is a mistake.";
+}
+function getTicketLimitMessage2(limit) {
+  return `You have reached the open ticket limit (**${limit}**). Please close one of your existing tickets before opening another.`;
+}
 async function handleTagSelection(interaction) {
   const selectedTag = interaction.values[0];
   const settings2 = await dataManager.getSettings();
@@ -62269,6 +62310,20 @@ async function handleTagSelection(interaction) {
     return;
   }
   await interaction.deferReply({ flags: [import_discord3.MessageFlags.Ephemeral] });
+  const freshSettings = await dataManager.getSettings();
+  if (freshSettings.bannedUserIds.includes(interaction.user.id)) {
+    await interaction.editReply({
+      content: getTicketBanMessage2()
+    });
+    return;
+  }
+  const openTickets = await dataManager.getOpenTicketsByUser(interaction.user.id);
+  if (openTickets.length >= freshSettings.maxOpenTicketsPerUser) {
+    await interaction.editReply({
+      content: getTicketLimitMessage2(freshSettings.maxOpenTicketsPerUser)
+    });
+    return;
+  }
   const channelName = `ticket-${interaction.user.username}-${Date.now().toString().slice(-4)}`;
   try {
     const ticketChannel = await guild.channels.create({
@@ -62288,11 +62343,11 @@ async function handleTagSelection(interaction) {
           id: interaction.user.id,
           allow: ["ViewChannel", "SendMessages", "ReadMessageHistory", "AttachFiles", "EmbedLinks"]
         },
-        ...settings2.adminRoles.map((roleId) => ({
+        ...freshSettings.adminRoles.map((roleId) => ({
           id: roleId,
           allow: ["ViewChannel", "SendMessages", "ReadMessageHistory", "ManageMessages"]
         })),
-        ...settings2.supportRoles.map((roleId) => ({
+        ...freshSettings.supportRoles.map((roleId) => ({
           id: roleId,
           allow: ["ViewChannel", "SendMessages", "ReadMessageHistory", "ManageMessages"]
         }))
@@ -62306,7 +62361,7 @@ async function handleTagSelection(interaction) {
       status: "open"
     });
     const embed = createTicketEmbed(ticket);
-    const buttons = getTicketButtons(ticket, settings2);
+    const buttons = getTicketButtons(ticket, freshSettings);
     const embedMessage = await ticketChannel.send({
       embeds: [embed],
       components: [buttons]
@@ -62455,7 +62510,7 @@ Transcript has been saved and sent to the ticket creator.`
 }
 
 // src/commands/setupCommand.ts
-var import_discord9 = __toESM(require_src(), 1);
+var import_discord10 = __toESM(require_src(), 1);
 
 // src/commands/setup/tags.ts
 var import_discord4 = __toESM(require_src(), 1);
@@ -62511,21 +62566,38 @@ var ticketchannel_default = {
   data: new import_discord5.SlashCommandSubcommandBuilder().setName("ticketchannel").setDescription("Send the Create Ticket button message").addChannelOption((option) => option.setName("channel").setDescription("Channel to send the message to").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.options.getChannel("channel");
-    if (!channel || channel.type !== 0) {
+    if (!channel || channel.type !== import_discord5.ChannelType.GuildText) {
       await interaction.reply({ content: "Please select a text channel.", flags: [import_discord5.MessageFlags.Ephemeral] });
+      return;
+    }
+    const botMember = interaction.guild?.members.me;
+    const permissions = botMember ? channel.permissionsFor(botMember) : null;
+    if (!permissions || !permissions.has(import_discord5.PermissionFlagsBits.ViewChannel) || !permissions.has(import_discord5.PermissionFlagsBits.SendMessages)) {
+      await interaction.reply({
+        content: "I do not have permission to send messages in that channel. Please update the channel permissions and try again.",
+        flags: [import_discord5.MessageFlags.Ephemeral]
+      });
       return;
     }
     const button = new import_discord5.ButtonBuilder().setCustomId("create_ticket").setLabel("Create Ticket").setStyle(import_discord5.ButtonStyle.Primary);
     const row = new import_discord5.ActionRowBuilder().addComponents(button);
-    const message = await channel.send({
-      content: "Click the button below to create a support ticket.",
-      components: [row]
-    });
-    await dataManager.updateSettings({
-      channelId: channel.id,
-      messageId: message.id
-    });
-    await interaction.reply({ content: "Create Ticket button has been sent!", flags: [import_discord5.MessageFlags.Ephemeral] });
+    try {
+      const message = await channel.send({
+        content: "Click the button below to create a support ticket.",
+        components: [row]
+      });
+      await dataManager.updateSettings({
+        channelId: channel.id,
+        messageId: message.id
+      });
+      await interaction.reply({ content: "Create Ticket button has been sent!", flags: [import_discord5.MessageFlags.Ephemeral] });
+    } catch (error) {
+      console.error("Failed to send create ticket button message:", error);
+      await interaction.reply({
+        content: "Failed to send the Create Ticket button in that channel. Please verify my channel permissions and try again.",
+        flags: [import_discord5.MessageFlags.Ephemeral]
+      });
+    }
   }
 };
 // src/commands/setup/ticketcategory.ts
@@ -62627,9 +62699,45 @@ var permissions_default = {
     }
   }
 };
+// src/commands/setup/limit.ts
+var import_discord9 = __toESM(require_src(), 1);
+var limit_default = {
+  data: new import_discord9.SlashCommandSubcommandBuilder().setName("limit").setDescription("Configure the per-user open ticket limit").addIntegerOption((option) => option.setName("value").setDescription("Maximum number of open tickets a user can have").setRequired(false).setMinValue(1)).addStringOption((option) => option.setName("view").setDescription("View the current ticket limit").setRequired(false).addChoices({ name: "Yes", value: "yes" })),
+  async execute(interaction) {
+    const view = interaction.options.getString("view");
+    const value = interaction.options.getInteger("value");
+    if (view === "yes") {
+      const settings2 = await dataManager.getSettings();
+      await interaction.reply({
+        content: `Current open ticket limit per user: **${settings2.maxOpenTicketsPerUser}**`,
+        flags: [import_discord9.MessageFlags.Ephemeral]
+      });
+      return;
+    }
+    if (value === null) {
+      await interaction.reply({
+        content: "Please provide a ticket limit value or use `view: yes`.",
+        flags: [import_discord9.MessageFlags.Ephemeral]
+      });
+      return;
+    }
+    if (value < 1) {
+      await interaction.reply({
+        content: "The open ticket limit must be at least **1**.",
+        flags: [import_discord9.MessageFlags.Ephemeral]
+      });
+      return;
+    }
+    await dataManager.updateSettings({ maxOpenTicketsPerUser: value });
+    await interaction.reply({
+      content: `Open ticket limit per user has been set to **${value}**.`,
+      flags: [import_discord9.MessageFlags.Ephemeral]
+    });
+  }
+};
 // src/commands/setupCommand.ts
 var setupCommand_default = {
-  data: new import_discord9.SlashCommandBuilder().setName("setup").setDescription("Setup ticket bot").addSubcommand(tags_default.data).addSubcommand(ticketchannel_default.data).addSubcommand(ticketcategory_default.data).addSubcommand(roles_default.data).addSubcommand(permissions_default.data),
+  data: new import_discord10.SlashCommandBuilder().setName("setup").setDescription("Setup ticket bot").addSubcommand(tags_default.data).addSubcommand(ticketchannel_default.data).addSubcommand(ticketcategory_default.data).addSubcommand(roles_default.data).addSubcommand(permissions_default.data).addSubcommand(limit_default.data),
   async execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
     switch (subcommand) {
@@ -62648,12 +62756,15 @@ var setupCommand_default = {
       case "permissions":
         await permissions_default.execute(interaction);
         break;
+      case "limit":
+        await limit_default.execute(interaction);
+        break;
     }
   }
 };
 
 // src/commands/ticket/close.ts
-var import_discord10 = __toESM(require_src(), 1);
+var import_discord11 = __toESM(require_src(), 1);
 
 // src/utils/permissionChecks.ts
 async function isAdmin(member) {
@@ -62699,23 +62810,23 @@ async function hasAdminOrSupport(interaction) {
 
 // src/commands/ticket/close.ts
 var close_default = {
-  data: new import_discord10.SlashCommandBuilder().setName("close").setDescription("Close the current ticket"),
+  data: new import_discord11.SlashCommandBuilder().setName("close").setDescription("Close the current ticket"),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = await dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord10.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord11.MessageFlags.Ephemeral] });
       return;
     }
     if (!await canCloseTicket(interaction, ticket.userId)) {
-      await interaction.reply({ content: "You do not have permission to close this ticket.", flags: [import_discord10.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "You do not have permission to close this ticket.", flags: [import_discord11.MessageFlags.Ephemeral] });
       return;
     }
     const permissions = channel.permissionsFor(interaction.client.user);
     if (!permissions || !permissions.has("ViewChannel") || !permissions.has("ReadMessageHistory")) {
       await interaction.reply({
         content: "I do not have permission to access this channel. Please contact an administrator.",
-        flags: [import_discord10.MessageFlags.Ephemeral]
+        flags: [import_discord11.MessageFlags.Ephemeral]
       });
       return;
     }
@@ -62759,26 +62870,26 @@ Failed to save transcript due to permission issues.`
 };
 
 // src/commands/ticket/claim.ts
-var import_discord11 = __toESM(require_src(), 1);
+var import_discord12 = __toESM(require_src(), 1);
 var claim_default = {
-  data: new import_discord11.SlashCommandBuilder().setName("claim").setDescription("Claim the current ticket"),
+  data: new import_discord12.SlashCommandBuilder().setName("claim").setDescription("Claim the current ticket"),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = await dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord11.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord12.MessageFlags.Ephemeral] });
       return;
     }
     if (ticket.status === "closed") {
-      await interaction.reply({ content: "This ticket is already closed.", flags: [import_discord11.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "This ticket is already closed.", flags: [import_discord12.MessageFlags.Ephemeral] });
       return;
     }
     if (!await canClaimTicket(interaction)) {
-      await interaction.reply({ content: "You do not have permission to claim tickets.", flags: [import_discord11.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "You do not have permission to claim tickets.", flags: [import_discord12.MessageFlags.Ephemeral] });
       return;
     }
     if (ticket.claimedBy === interaction.user.id) {
-      await interaction.reply({ content: "You have already claimed this ticket.", flags: [import_discord11.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "You have already claimed this ticket.", flags: [import_discord12.MessageFlags.Ephemeral] });
       return;
     }
     await dataManager.updateTicket(ticket.id, {
@@ -62795,35 +62906,9 @@ var claim_default = {
 };
 
 // src/commands/ticket/adduser.ts
-var import_discord12 = __toESM(require_src(), 1);
-var adduser_default = {
-  data: new import_discord12.SlashCommandBuilder().setName("adduser").setDescription("Add a user to the ticket").addUserOption((option) => option.setName("user").setDescription("User to add").setRequired(true)),
-  async execute(interaction) {
-    const channel = interaction.channel;
-    const ticket = await dataManager.getTicketByChannelId(channel.id);
-    if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord12.MessageFlags.Ephemeral] });
-      return;
-    }
-    if (!await hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: "You do not have permission to add users to tickets.", flags: [import_discord12.MessageFlags.Ephemeral] });
-      return;
-    }
-    const user = interaction.options.getUser("user");
-    try {
-      await channel.permissionOverwrites.create(user.id, { ViewChannel: true, SendMessages: true });
-      await interaction.reply({ content: `${user.username} has been added to the ticket.` });
-    } catch (error) {
-      console.error("Failed to add user:", error);
-      await interaction.reply({ content: "Failed to add user to the ticket.", flags: [import_discord12.MessageFlags.Ephemeral] });
-    }
-  }
-};
-
-// src/commands/ticket/removeuser.ts
 var import_discord13 = __toESM(require_src(), 1);
-var removeuser_default = {
-  data: new import_discord13.SlashCommandBuilder().setName("removeuser").setDescription("Remove a user from the ticket").addUserOption((option) => option.setName("user").setDescription("User to remove").setRequired(true)),
+var adduser_default = {
+  data: new import_discord13.SlashCommandBuilder().setName("adduser").setDescription("Add a user to the ticket").addUserOption((option) => option.setName("user").setDescription("User to add").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = await dataManager.getTicketByChannelId(channel.id);
@@ -62832,28 +62917,24 @@ var removeuser_default = {
       return;
     }
     if (!await hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: "You do not have permission to remove users from tickets.", flags: [import_discord13.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "You do not have permission to add users to tickets.", flags: [import_discord13.MessageFlags.Ephemeral] });
       return;
     }
     const user = interaction.options.getUser("user");
-    if (user.id === ticket.userId) {
-      await interaction.reply({ content: "Cannot remove the ticket creator.", flags: [import_discord13.MessageFlags.Ephemeral] });
-      return;
-    }
     try {
-      await channel.permissionOverwrites.delete(user.id);
-      await interaction.reply({ content: `${user.username} has been removed from the ticket.` });
+      await channel.permissionOverwrites.create(user.id, { ViewChannel: true, SendMessages: true });
+      await interaction.reply({ content: `${user.username} has been added to the ticket.` });
     } catch (error) {
-      console.error("Failed to remove user:", error);
-      await interaction.reply({ content: "Failed to remove user from the ticket.", flags: [import_discord13.MessageFlags.Ephemeral] });
+      console.error("Failed to add user:", error);
+      await interaction.reply({ content: "Failed to add user to the ticket.", flags: [import_discord13.MessageFlags.Ephemeral] });
     }
   }
 };
 
-// src/commands/ticket/rename.ts
+// src/commands/ticket/removeuser.ts
 var import_discord14 = __toESM(require_src(), 1);
-var rename_default = {
-  data: new import_discord14.SlashCommandBuilder().setName("rename").setDescription("Rename the ticket channel").addStringOption((option) => option.setName("name").setDescription("New channel name").setRequired(true)),
+var removeuser_default = {
+  data: new import_discord14.SlashCommandBuilder().setName("removeuser").setDescription("Remove a user from the ticket").addUserOption((option) => option.setName("user").setDescription("User to remove").setRequired(true)),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = await dataManager.getTicketByChannelId(channel.id);
@@ -62861,8 +62942,38 @@ var rename_default = {
       await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord14.MessageFlags.Ephemeral] });
       return;
     }
+    if (!await hasAdminOrSupport(interaction)) {
+      await interaction.reply({ content: "You do not have permission to remove users from tickets.", flags: [import_discord14.MessageFlags.Ephemeral] });
+      return;
+    }
+    const user = interaction.options.getUser("user");
+    if (user.id === ticket.userId) {
+      await interaction.reply({ content: "Cannot remove the ticket creator.", flags: [import_discord14.MessageFlags.Ephemeral] });
+      return;
+    }
+    try {
+      await channel.permissionOverwrites.delete(user.id);
+      await interaction.reply({ content: `${user.username} has been removed from the ticket.` });
+    } catch (error) {
+      console.error("Failed to remove user:", error);
+      await interaction.reply({ content: "Failed to remove user from the ticket.", flags: [import_discord14.MessageFlags.Ephemeral] });
+    }
+  }
+};
+
+// src/commands/ticket/rename.ts
+var import_discord15 = __toESM(require_src(), 1);
+var rename_default = {
+  data: new import_discord15.SlashCommandBuilder().setName("rename").setDescription("Rename the ticket channel").addStringOption((option) => option.setName("name").setDescription("New channel name").setRequired(true)),
+  async execute(interaction) {
+    const channel = interaction.channel;
+    const ticket = await dataManager.getTicketByChannelId(channel.id);
+    if (!ticket) {
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord15.MessageFlags.Ephemeral] });
+      return;
+    }
     if (!await canManageTicket(interaction, ticket.userId)) {
-      await interaction.reply({ content: "You do not have permission to rename this ticket.", flags: [import_discord14.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "You do not have permission to rename this ticket.", flags: [import_discord15.MessageFlags.Ephemeral] });
       return;
     }
     const newName = interaction.options.getString("name");
@@ -62872,24 +62983,24 @@ var rename_default = {
       await interaction.reply({ content: `Ticket channel has been renamed to **${sanitizedName}**.` });
     } catch (error) {
       console.error("Failed to rename channel:", error);
-      await interaction.reply({ content: "Failed to rename the ticket channel.", flags: [import_discord14.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "Failed to rename the ticket channel.", flags: [import_discord15.MessageFlags.Ephemeral] });
     }
   }
 };
 
 // src/commands/ticket/transcript.ts
-var import_discord15 = __toESM(require_src(), 1);
+var import_discord16 = __toESM(require_src(), 1);
 var transcript_default = {
-  data: new import_discord15.SlashCommandBuilder().setName("transcript").setDescription("Generate and send the ticket transcript"),
+  data: new import_discord16.SlashCommandBuilder().setName("transcript").setDescription("Generate and send the ticket transcript"),
   async execute(interaction) {
     const channel = interaction.channel;
     const ticket = await dataManager.getTicketByChannelId(channel.id);
     if (!ticket) {
-      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord15.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "This is not a ticket channel.", flags: [import_discord16.MessageFlags.Ephemeral] });
       return;
     }
     if (!await hasAdminOrSupport(interaction)) {
-      await interaction.reply({ content: "You do not have permission to generate transcripts.", flags: [import_discord15.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "You do not have permission to generate transcripts.", flags: [import_discord16.MessageFlags.Ephemeral] });
       return;
     }
     await interaction.deferReply();
@@ -62912,7 +63023,75 @@ var transcript_default = {
       }
     } catch (error) {
       console.error("Failed to generate transcript:", error);
-      await interaction.followUp({ content: "Failed to generate transcript.", flags: [import_discord15.MessageFlags.Ephemeral] });
+      await interaction.followUp({ content: "Failed to generate transcript.", flags: [import_discord16.MessageFlags.Ephemeral] });
+    }
+  }
+};
+
+// src/commands/ticketban.ts
+var import_discord17 = __toESM(require_src(), 1);
+var ticketban_default = {
+  data: new import_discord17.SlashCommandBuilder().setName("ticketban").setDescription("Ban users from creating tickets").addStringOption((option) => option.setName("action").setDescription("Manage ticket bans").setRequired(true).addChoices({ name: "Add", value: "add" }, { name: "List", value: "list" }, { name: "Remove", value: "remove" })).addUserOption((option) => option.setName("user").setDescription("User to ban or unban from creating tickets").setRequired(false)),
+  async execute(interaction) {
+    const action = interaction.options.getString("action");
+    const user = interaction.options.getUser("user");
+    const settings2 = await dataManager.getSettings();
+    if (action === "list") {
+      if (settings2.bannedUserIds.length === 0) {
+        await interaction.reply({
+          content: "No users are banned from creating tickets.",
+          flags: [import_discord17.MessageFlags.Ephemeral]
+        });
+        return;
+      }
+      const bannedUsers = settings2.bannedUserIds.map((userId) => `- <@${userId}> (${userId})`).join(`
+`);
+      await interaction.reply({
+        content: `Users banned from creating tickets:
+${bannedUsers}`,
+        flags: [import_discord17.MessageFlags.Ephemeral]
+      });
+      return;
+    }
+    if (!user) {
+      await interaction.reply({
+        content: "Please select a user to ban or unban.",
+        flags: [import_discord17.MessageFlags.Ephemeral]
+      });
+      return;
+    }
+    if (action === "add") {
+      if (settings2.bannedUserIds.includes(user.id)) {
+        await interaction.reply({
+          content: "This user is already banned from creating tickets.",
+          flags: [import_discord17.MessageFlags.Ephemeral]
+        });
+        return;
+      }
+      await dataManager.updateSettings({
+        bannedUserIds: [...settings2.bannedUserIds, user.id]
+      });
+      await interaction.reply({
+        content: `User **${user.username}** has been banned from creating tickets.`,
+        flags: [import_discord17.MessageFlags.Ephemeral]
+      });
+      return;
+    }
+    if (action === "remove") {
+      if (!settings2.bannedUserIds.includes(user.id)) {
+        await interaction.reply({
+          content: "This user is not banned from creating tickets.",
+          flags: [import_discord17.MessageFlags.Ephemeral]
+        });
+        return;
+      }
+      await dataManager.updateSettings({
+        bannedUserIds: settings2.bannedUserIds.filter((userId) => userId !== user.id)
+      });
+      await interaction.reply({
+        content: `User **${user.username}** has been unbanned from creating tickets.`,
+        flags: [import_discord17.MessageFlags.Ephemeral]
+      });
     }
   }
 };
@@ -62925,13 +63104,13 @@ if (!TOKEN || !CLIENT_ID) {
   console.error("Missing required environment variables");
   process.exit(1);
 }
-var client = new import_discord16.Client({
+var client = new import_discord18.Client({
   intents: [
-    import_discord16.GatewayIntentBits.Guilds,
-    import_discord16.GatewayIntentBits.GuildMessages,
-    import_discord16.GatewayIntentBits.MessageContent
+    import_discord18.GatewayIntentBits.Guilds,
+    import_discord18.GatewayIntentBits.GuildMessages,
+    import_discord18.GatewayIntentBits.MessageContent
   ],
-  partials: [import_discord16.Partials.Channel]
+  partials: [import_discord18.Partials.Channel]
 });
 var commands = [
   setupCommand_default.data.toJSON(),
@@ -62940,13 +63119,14 @@ var commands = [
   adduser_default.data.toJSON(),
   removeuser_default.data.toJSON(),
   rename_default.data.toJSON(),
-  transcript_default.data.toJSON()
+  transcript_default.data.toJSON(),
+  ticketban_default.data.toJSON()
 ];
 async function registerCommands() {
-  const rest = new import_discord16.REST({ version: "10" }).setToken(TOKEN);
+  const rest = new import_discord18.REST({ version: "10" }).setToken(TOKEN);
   try {
     console.log("Started refreshing application (/) commands.");
-    await rest.put(import_discord16.Routes.applicationCommands(CLIENT_ID), { body: commands });
+    await rest.put(import_discord18.Routes.applicationCommands(CLIENT_ID), { body: commands });
     console.log("Successfully reloaded application (/) commands.");
   } catch (error) {
     console.error("Error registering commands:", error);
@@ -63003,14 +63183,17 @@ client.on("interactionCreate", async (interaction) => {
         case "transcript":
           await transcript_default.execute(interaction);
           break;
+        case "ticketban":
+          await ticketban_default.execute(interaction);
+          break;
       }
     }
   } catch (error) {
     console.error("Error handling interaction:", error);
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: "An error occurred while processing your request.", flags: [import_discord16.MessageFlags.Ephemeral] });
+      await interaction.followUp({ content: "An error occurred while processing your request.", flags: [import_discord18.MessageFlags.Ephemeral] });
     } else {
-      await interaction.reply({ content: "An error occurred while processing your request.", flags: [import_discord16.MessageFlags.Ephemeral] });
+      await interaction.reply({ content: "An error occurred while processing your request.", flags: [import_discord18.MessageFlags.Ephemeral] });
     }
   }
 });

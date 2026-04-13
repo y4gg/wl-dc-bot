@@ -9,7 +9,9 @@ export const settings = sqliteTable('settings', {
   adminRolesJson: text('admin_roles_json').notNull().default('[]'),
   supportRolesJson: text('support_roles_json').notNull().default('[]'),
   autoCloseHours: integer('auto_close_hours').notNull().default(24),
-  userCanClose: integer('user_can_close', { mode: 'boolean' }).notNull().default(true)
+  userCanClose: integer('user_can_close', { mode: 'boolean' }).notNull().default(true),
+  maxOpenTicketsPerUser: integer('max_open_tickets_per_user').notNull().default(1),
+  bannedUserIdsJson: text('banned_user_ids_json').notNull().default('[]')
 });
 
 export const tickets = sqliteTable('tickets', {

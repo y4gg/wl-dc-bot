@@ -1,4 +1,4 @@
-import { SlashCommandSubcommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { SlashCommandSubcommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { dataManager } from '../../models/DataManager';
 
 export default {
@@ -14,8 +14,19 @@ export default {
   async execute(interaction: any) {
     const channel = interaction.options.getChannel('channel');
 
-    if (!channel || channel.type !== 0) {
+    if (!channel || channel.type !== ChannelType.GuildText) {
       await interaction.reply({ content: 'Please select a text channel.', flags: [MessageFlags.Ephemeral] });
+      return;
+    }
+
+    const botMember = interaction.guild?.members.me;
+    const permissions = botMember ? channel.permissionsFor(botMember) : null;
+
+    if (!permissions || !permissions.has(PermissionFlagsBits.ViewChannel) || !permissions.has(PermissionFlagsBits.SendMessages)) {
+      await interaction.reply({
+        content: 'I do not have permission to send messages in that channel. Please update the channel permissions and try again.',
+        flags: [MessageFlags.Ephemeral]
+      });
       return;
     }
 
@@ -27,16 +38,24 @@ export default {
     const row = new ActionRowBuilder<ButtonBuilder>()
       .addComponents(button);
 
-    const message = await channel.send({
-      content: 'Click the button below to create a support ticket.',
-      components: [row]
-    });
+    try {
+      const message = await channel.send({
+        content: 'Click the button below to create a support ticket.',
+        components: [row]
+      });
 
-    await dataManager.updateSettings({
-      channelId: channel.id,
-      messageId: message.id
-    });
+      await dataManager.updateSettings({
+        channelId: channel.id,
+        messageId: message.id
+      });
 
-    await interaction.reply({ content: 'Create Ticket button has been sent!', flags: [MessageFlags.Ephemeral] });
+      await interaction.reply({ content: 'Create Ticket button has been sent!', flags: [MessageFlags.Ephemeral] });
+    } catch (error) {
+      console.error('Failed to send create ticket button message:', error);
+      await interaction.reply({
+        content: 'Failed to send the Create Ticket button in that channel. Please verify my channel permissions and try again.',
+        flags: [MessageFlags.Ephemeral]
+      });
+    }
   }
 };
