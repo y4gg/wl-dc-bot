@@ -13,7 +13,6 @@ export default {
 
   async execute(interaction: any) {
     const channel = interaction.options.getChannel('channel');
-    const settings = dataManager.getSettings();
 
     if (!channel || channel.type !== 0) {
       await interaction.reply({ content: 'Please select a text channel.', flags: [MessageFlags.Ephemeral] });
@@ -33,7 +32,7 @@ export default {
       components: [row]
     });
 
-    dataManager.updateSettings({
+    await dataManager.updateSettings({
       channelId: channel.id,
       messageId: message.id
     });

@@ -35,7 +35,7 @@ export default {
     const action = interaction.options.getString('action');
     const role = interaction.options.getRole('role');
 
-    const settings = dataManager.getSettings();
+    const settings = await dataManager.getSettings();
 
     if (action === 'list') {
       const roleType = type === 'admin' ? 'Admin' : 'Support';
@@ -71,9 +71,9 @@ export default {
       const newArray = [...targetArray, role.id];
       
       if (type === 'admin') {
-        dataManager.updateSettings({ adminRoles: newArray });
+        await dataManager.updateSettings({ adminRoles: newArray });
       } else {
-        dataManager.updateSettings({ supportRoles: newArray });
+        await dataManager.updateSettings({ supportRoles: newArray });
       }
 
       await interaction.reply({ content: `Role **${role.name}** has been added as ${type}.`, flags: [MessageFlags.Ephemeral] });
@@ -86,9 +86,9 @@ export default {
       const newArray = targetArray.filter(id => id !== role.id);
       
       if (type === 'admin') {
-        dataManager.updateSettings({ adminRoles: newArray });
+        await dataManager.updateSettings({ adminRoles: newArray });
       } else {
-        dataManager.updateSettings({ supportRoles: newArray });
+        await dataManager.updateSettings({ supportRoles: newArray });
       }
 
       await interaction.reply({ content: `Role **${role.name}** has been removed from ${type}.`, flags: [MessageFlags.Ephemeral] });

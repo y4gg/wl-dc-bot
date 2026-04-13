@@ -10,7 +10,7 @@ export default {
 
   async execute(interaction: any) {
     const channel = interaction.channel;
-    const ticket = dataManager.getTicketByChannelId(channel.id);
+    const ticket = await dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
       await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
@@ -22,7 +22,7 @@ export default {
       return;
     }
 
-    if (!canClaimTicket(interaction)) {
+    if (!await canClaimTicket(interaction)) {
       await interaction.reply({ content: 'You do not have permission to claim tickets.', flags: [MessageFlags.Ephemeral] });
       return;
     }
@@ -32,12 +32,14 @@ export default {
       return;
     }
 
-    dataManager.updateTicket(ticket.id, { 
+    await dataManager.updateTicket(ticket.id, { 
       status: 'claimed',
       claimedBy: interaction.user.id 
     });
 
-    await updateTicketEmbed(interaction.client, ticket);
+    const updatedTicket = { ...ticket, status: 'claimed' as const, claimedBy: interaction.user.id };
+    const settings = await dataManager.getSettings();
+    await updateTicketEmbed(interaction.client, updatedTicket, settings);
 
     await interaction.reply({ 
       content: `Ticket has been claimed by ${interaction.user.username}.` 

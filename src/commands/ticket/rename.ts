@@ -14,14 +14,14 @@ export default {
 
   async execute(interaction: any) {
     const channel = interaction.channel;
-    const ticket = dataManager.getTicketByChannelId(channel.id);
+    const ticket = await dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
       await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
-    if (!canManageTicket(interaction, ticket.userId)) {
+    if (!await canManageTicket(interaction, ticket.userId)) {
       await interaction.reply({ content: 'You do not have permission to rename this ticket.', flags: [MessageFlags.Ephemeral] });
       return;
     }

@@ -5,3 +5,4 @@ data/
 AGENTS.md
 node_modules/
 dist/
+dist/index.js

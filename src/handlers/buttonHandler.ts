@@ -2,7 +2,7 @@ import { ButtonInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSel
 import { dataManager } from '../models/DataManager';
 
 export async function handleCreateTicket(interaction: ButtonInteraction) {
-  const settings = dataManager.getSettings();
+  const settings = await dataManager.getSettings();
 
   if (!settings.categoryId) {
     await interaction.reply({ 
@@ -20,7 +20,7 @@ export async function handleCreateTicket(interaction: ButtonInteraction) {
     return;
   }
 
-  const existingTicket = dataManager.getTicketsByUser(interaction.user.id).find(t => t.status !== 'closed');
+  const existingTicket = (await dataManager.getTicketsByUser(interaction.user.id)).find(t => t.status !== 'closed');
   
   if (existingTicket) {
     await interaction.reply({ 

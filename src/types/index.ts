@@ -52,5 +52,5 @@ export interface ButtonInteraction {
 }
 
 export interface CommandOptions {
-  [key: string]: any;
+  [key: string]: unknown;
 }

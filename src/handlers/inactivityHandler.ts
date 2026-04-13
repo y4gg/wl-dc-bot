@@ -4,8 +4,8 @@ import { generateTranscript, saveTranscriptToFile } from '../utils/transcriptGen
 
 export function startInactivityCheck(client: Client) {
   setInterval(async () => {
-    const settings = dataManager.getSettings();
-    const inactiveTickets = dataManager.getInactiveTickets(settings.autoCloseHours);
+    const settings = await dataManager.getSettings();
+    const inactiveTickets = await dataManager.getInactiveTickets(settings.autoCloseHours);
 
     for (const ticket of inactiveTickets) {
       try {
@@ -13,7 +13,7 @@ export function startInactivityCheck(client: Client) {
         
         if (!channel) {
           console.log(`Channel ${ticket.channelId} not found, deleting ticket ${ticket.id}`);
-          dataManager.deleteTicket(ticket.id);
+          await dataManager.deleteTicket(ticket.id);
           continue;
         }
 
@@ -24,7 +24,7 @@ export function startInactivityCheck(client: Client) {
         });
 
         setTimeout(async () => {
-          const updatedTicket = dataManager.getTicketById(ticket.id);
+          const updatedTicket = await dataManager.getTicketById(ticket.id);
           
           if (!updatedTicket || updatedTicket.status === 'closed') {
             return;
@@ -40,8 +40,8 @@ export function startInactivityCheck(client: Client) {
                 const transcript = await generateTranscript(updatedChannel, updatedTicket.id, updatedTicket.userId);
                 const filepath = saveTranscriptToFile(transcript);
                 
-                dataManager.addTranscript(transcript);
-                dataManager.updateTicket(updatedTicket.id, { status: 'closed', transcript: filepath });
+                await dataManager.addTranscript(transcript);
+                await dataManager.updateTicket(updatedTicket.id, { status: 'closed', transcript: filepath });
 
                 try {
                   const user = await client.users.fetch(updatedTicket.userId);
@@ -58,7 +58,7 @@ export function startInactivityCheck(client: Client) {
                 });
 
                 await updatedChannel.delete();
-                dataManager.deleteTicket(updatedTicket.id);
+                await dataManager.deleteTicket(updatedTicket.id);
               }
             } catch (error) {
               console.error(`Failed to auto-close ticket ${updatedTicket.id}:`, error);

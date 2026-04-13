@@ -10,14 +10,14 @@ export default {
 
   async execute(interaction: any) {
     const channel = interaction.channel;
-    const ticket = dataManager.getTicketByChannelId(channel.id);
+    const ticket = await dataManager.getTicketByChannelId(channel.id);
 
     if (!ticket) {
       await interaction.reply({ content: 'This is not a ticket channel.', flags: [MessageFlags.Ephemeral] });
       return;
     }
 
-    if (!hasAdminOrSupport(interaction)) {
+    if (!await hasAdminOrSupport(interaction)) {
       await interaction.reply({ content: 'You do not have permission to generate transcripts.', flags: [MessageFlags.Ephemeral] });
       return;
     }
@@ -28,7 +28,7 @@ export default {
       const transcript = await generateTranscript(channel as any, ticket.id, ticket.userId);
       const filepath = saveTranscriptToFile(transcript);
       
-      dataManager.addTranscript(transcript);
+      await dataManager.addTranscript(transcript);
 
       await interaction.followUp({
         content: `Here is the transcript for ticket ${ticket.id}:`,

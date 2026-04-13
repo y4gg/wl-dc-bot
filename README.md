@@ -133,18 +133,16 @@ Available in ticket channels:
 
 ## Data Storage
 
-Data is stored in separate files for better security:
+Data is stored locally in SQLite with Drizzle ORM:
 
-- `settings.json` - Bot configuration (can be committed to git)
-  - Category, channel, and message IDs
-  - Ticket tags
-  - Admin and support roles
-  - Auto-close settings
-  - User close permissions
-
-- `data/tickets.json` - Ticket data (local only, not in git)
+- `data/bot.db` - Main database
+  - Bot configuration
   - Active tickets
-  - Ticket transcripts metadata
+  - Archived transcript payloads
+
+- `settings.json` and `data/tickets.json` are treated as legacy import sources only
+  - If the database is empty on first startup, their contents are imported once
+  - Runtime reads and writes no longer use these files
 
 Transcript files are saved in `data/transcripts/` directory (local only, not in git).
 
@@ -181,7 +179,7 @@ Transcript files are saved in `data/transcripts/` directory (local only, not in 
 
 ### Auto-close not working
 - Check bot has sufficient permissions
-- Verify `data/tickets.json` is being saved properly (check file write permissions)
+- Verify `data/bot.db` is writable
 - Check console for error messages
 
 ## Development
@@ -190,7 +188,7 @@ The bot uses:
 - TypeScript for type safety
 - Bun for fast development and runtime
 - discord.js v14 for Discord API interactions
-- JSON file storage (single server support)
+- SQLite + Drizzle ORM for persistence
 
 ## License
 

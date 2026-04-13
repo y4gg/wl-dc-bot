@@ -1,156 +1,231 @@
-import { Ticket, TicketSettings } from '../types';
-import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs';
-import { join } from 'path';
+import { and, eq, lt } from 'drizzle-orm';
+import { db } from '../db/client';
+import { initializeDatabase, DEFAULT_SETTINGS } from '../db/bootstrap';
+import { settings, tickets, transcripts } from '../db/schema';
+import { Ticket, TicketSettings, Transcript, Message } from '../types';
 
-const SETTINGS_PATH = join(process.cwd(), 'settings.json');
-const TICKETS_PATH = join(__dirname, '../../data/tickets.json');
-
-export class DataManager {
-  private settings: TicketSettings;
-  private ticketsData: { tickets: Ticket[], transcripts: any[] };
-
-  constructor() {
-    this.settings = this.loadSettings();
-    this.ticketsData = this.loadTicketsData();
+function parseStringArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) && parsed.every(item => typeof item === 'string') ? parsed : [];
+  } catch {
+    return [];
   }
+}
 
-  private loadSettings(): TicketSettings {
-    const oldSettingsPath = join(__dirname, '../../data/settings.json');
-    const defaultSettings: TicketSettings = {
-      categoryId: '',
-      channelId: '',
-      messageId: '',
-      tags: [],
-      adminRoles: [],
-      supportRoles: [],
-      autoCloseHours: 24,
-      userCanClose: true
-    };
+function parseMessages(value: string): Message[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
 
-    try {
-      if (!existsSync(SETTINGS_PATH)) {
-        if (existsSync(oldSettingsPath)) {
-          console.log('Migrating settings from data/settings.json to root settings.json');
-          copyFileSync(oldSettingsPath, SETTINGS_PATH);
-        } else {
-          console.log('Creating new settings.json file with default values');
-          writeFileSync(SETTINGS_PATH, JSON.stringify({ settings: defaultSettings }, null, 2));
-        }
+    return parsed.filter((item): item is Message => {
+      if (typeof item !== 'object' || item === null) {
+        return false;
       }
 
-      const file = readFileSync(SETTINGS_PATH, 'utf-8');
-      const data = JSON.parse(file);
-      return data.settings;
-    } catch (error) {
-      console.error('Failed to load settings file:', error);
-      return defaultSettings;
-    }
+      const candidate = item as Record<string, unknown>;
+      return typeof candidate.author === 'string'
+        && typeof candidate.authorId === 'string'
+        && typeof candidate.content === 'string'
+        && typeof candidate.timestamp === 'number'
+        && typeof candidate.isBot === 'boolean';
+    });
+  } catch {
+    return [];
+  }
+}
+
+function mapSettingsRow(row: typeof settings.$inferSelect | undefined): TicketSettings {
+  if (!row) {
+    return { ...DEFAULT_SETTINGS };
   }
 
-  private loadTicketsData(): { tickets: Ticket[], transcripts: any[] } {
-    try {
-      const file = readFileSync(TICKETS_PATH, 'utf-8');
-      const data = JSON.parse(file);
-      return {
-        tickets: data.tickets || [],
-        transcripts: data.transcripts || []
-      };
-    } catch (error) {
-      console.error('Failed to load tickets file:', error);
-      return {
-        tickets: [],
-        transcripts: []
-      };
-    }
+  return {
+    categoryId: row.categoryId,
+    channelId: row.channelId,
+    messageId: row.messageId,
+    tags: parseStringArray(row.tagsJson),
+    adminRoles: parseStringArray(row.adminRolesJson),
+    supportRoles: parseStringArray(row.supportRolesJson),
+    autoCloseHours: row.autoCloseHours,
+    userCanClose: row.userCanClose
+  };
+}
+
+function mapTicketRow(row: typeof tickets.$inferSelect): Ticket {
+  return {
+    id: row.id,
+    channelId: row.channelId,
+    userId: row.userId,
+    userName: row.userName,
+    tag: row.tag,
+    status: row.status as Ticket['status'],
+    claimedBy: row.claimedBy ?? undefined,
+    createdAt: row.createdAt,
+    lastActivity: row.lastActivity,
+    transcript: row.transcriptFilePath ?? undefined,
+    embedMessageId: row.embedMessageId ?? undefined
+  };
+}
+
+function mapTranscriptRow(row: typeof transcripts.$inferSelect): Transcript {
+  return {
+    ticketId: row.ticketId,
+    channelId: row.channelId,
+    userId: row.userId,
+    createdAt: row.createdAt,
+    messages: parseMessages(row.messagesJson)
+  };
+}
+
+export class DataManager {
+  async init(): Promise<void> {
+    await initializeDatabase();
   }
 
-  private saveSettings(): void {
-    try {
-      writeFileSync(SETTINGS_PATH, JSON.stringify({ settings: this.settings }, null, 2));
-    } catch (error) {
-      console.error('Failed to save settings file:', error);
-    }
+  async getSettings(): Promise<TicketSettings> {
+    const row = db.select().from(settings).where(eq(settings.id, 1)).get();
+    return mapSettingsRow(row);
   }
 
-  private saveTicketsData(): void {
-    try {
-      writeFileSync(TICKETS_PATH, JSON.stringify(this.ticketsData, null, 2));
-    } catch (error) {
-      console.error('Failed to save tickets file:', error);
-    }
+  async updateSettings(nextSettings: Partial<TicketSettings>): Promise<void> {
+    const current = await this.getSettings();
+    const merged: TicketSettings = { ...current, ...nextSettings };
+
+    db.insert(settings).values({
+      id: 1,
+      categoryId: merged.categoryId ?? '',
+      channelId: merged.channelId ?? '',
+      messageId: merged.messageId ?? '',
+      tagsJson: JSON.stringify(merged.tags),
+      adminRolesJson: JSON.stringify(merged.adminRoles),
+      supportRolesJson: JSON.stringify(merged.supportRoles),
+      autoCloseHours: merged.autoCloseHours,
+      userCanClose: merged.userCanClose
+    }).onConflictDoUpdate({
+      target: settings.id,
+      set: {
+        categoryId: merged.categoryId ?? '',
+        channelId: merged.channelId ?? '',
+        messageId: merged.messageId ?? '',
+        tagsJson: JSON.stringify(merged.tags),
+        adminRolesJson: JSON.stringify(merged.adminRoles),
+        supportRolesJson: JSON.stringify(merged.supportRoles),
+        autoCloseHours: merged.autoCloseHours,
+        userCanClose: merged.userCanClose
+      }
+    }).run();
   }
 
-  getSettings(): TicketSettings {
-    return this.settings;
+  async getTickets(): Promise<Ticket[]> {
+    const rows = db.select().from(tickets).all();
+    return rows.map(mapTicketRow);
   }
 
-  updateSettings(settings: Partial<TicketSettings>): void {
-    this.settings = { ...this.settings, ...settings };
-    this.saveSettings();
+  async getTicketById(ticketId: string): Promise<Ticket | undefined> {
+    const row = db.select().from(tickets).where(eq(tickets.id, ticketId)).get();
+    return row ? mapTicketRow(row) : undefined;
   }
 
-  getTickets(): Ticket[] {
-    return this.ticketsData.tickets;
+  async getTicketByChannelId(channelId: string): Promise<Ticket | undefined> {
+    const row = db.select().from(tickets).where(eq(tickets.channelId, channelId)).get();
+    return row ? mapTicketRow(row) : undefined;
   }
 
-  getTicketById(ticketId: string): Ticket | undefined {
-    return this.ticketsData.tickets.find(t => t.id === ticketId);
+  async getTicketsByUser(userId: string): Promise<Ticket[]> {
+    const rows = db.select().from(tickets).where(eq(tickets.userId, userId)).all();
+    return rows.map(mapTicketRow);
   }
 
-  getTicketByChannelId(channelId: string): Ticket | undefined {
-    return this.ticketsData.tickets.find(t => t.channelId === channelId);
-  }
-
-  getTicketsByUser(userId: string): Ticket[] {
-    return this.ticketsData.tickets.filter(t => t.userId === userId);
-  }
-
-  createTicket(ticket: Omit<Ticket, 'id' | 'createdAt' | 'lastActivity'>): Ticket {
+  async createTicket(ticket: Omit<Ticket, 'id' | 'createdAt' | 'lastActivity'>): Promise<Ticket> {
+    const now = Date.now();
     const newTicket: Ticket = {
       ...ticket,
-      id: `ticket-${Date.now()}`,
-      createdAt: Date.now(),
-      lastActivity: Date.now()
+      id: `ticket-${now}`,
+      createdAt: now,
+      lastActivity: now
     };
-    this.ticketsData.tickets.push(newTicket);
-    this.saveTicketsData();
+
+    db.insert(tickets).values({
+      id: newTicket.id,
+      channelId: newTicket.channelId,
+      userId: newTicket.userId,
+      userName: newTicket.userName,
+      tag: newTicket.tag,
+      status: newTicket.status,
+      claimedBy: newTicket.claimedBy ?? null,
+      createdAt: newTicket.createdAt,
+      lastActivity: newTicket.lastActivity,
+      transcriptFilePath: newTicket.transcript ?? null,
+      embedMessageId: newTicket.embedMessageId ?? null
+    }).run();
+
     return newTicket;
   }
 
-  updateTicket(ticketId: string, updates: Partial<Ticket>): void {
-    const index = this.ticketsData.tickets.findIndex(t => t.id === ticketId);
-    if (index !== -1) {
-      this.ticketsData.tickets[index] = { ...this.ticketsData.tickets[index], ...updates, lastActivity: Date.now() };
-      this.saveTicketsData();
-    }
+  async updateTicket(ticketId: string, updates: Partial<Ticket>): Promise<void> {
+    const updateValues: Partial<typeof tickets.$inferInsert> = {
+      lastActivity: Date.now()
+    };
+
+    if (updates.channelId !== undefined) updateValues.channelId = updates.channelId;
+    if (updates.userId !== undefined) updateValues.userId = updates.userId;
+    if (updates.userName !== undefined) updateValues.userName = updates.userName;
+    if (updates.tag !== undefined) updateValues.tag = updates.tag;
+    if (updates.status !== undefined) updateValues.status = updates.status;
+    if (updates.claimedBy !== undefined) updateValues.claimedBy = updates.claimedBy;
+    if (updates.createdAt !== undefined) updateValues.createdAt = updates.createdAt;
+    if (updates.lastActivity !== undefined) updateValues.lastActivity = updates.lastActivity;
+    if (updates.transcript !== undefined) updateValues.transcriptFilePath = updates.transcript;
+    if (updates.embedMessageId !== undefined) updateValues.embedMessageId = updates.embedMessageId;
+
+    db.update(tickets).set(updateValues).where(eq(tickets.id, ticketId)).run();
   }
 
-  updateTicketActivity(channelId: string): void {
-    const ticket = this.getTicketByChannelId(channelId);
-    if (ticket) {
-      this.updateTicket(ticket.id, { lastActivity: Date.now() });
-    }
+  async updateTicketActivity(channelId: string): Promise<void> {
+    db.update(tickets)
+      .set({ lastActivity: Date.now() })
+      .where(eq(tickets.channelId, channelId))
+      .run();
   }
 
-  deleteTicket(ticketId: string): void {
-    this.ticketsData.tickets = this.ticketsData.tickets.filter(t => t.id !== ticketId);
-    this.saveTicketsData();
+  async deleteTicket(ticketId: string): Promise<void> {
+    db.delete(tickets).where(eq(tickets.id, ticketId)).run();
   }
 
-  getInactiveTickets(hours: number): Ticket[] {
+  async getInactiveTickets(hours: number): Promise<Ticket[]> {
     const threshold = Date.now() - (hours * 60 * 60 * 1000);
-    return this.ticketsData.tickets.filter(t => 
-      t.status === 'open' && t.lastActivity < threshold
-    );
+    const rows = db.select()
+      .from(tickets)
+      .where(and(eq(tickets.status, 'open'), lt(tickets.lastActivity, threshold)))
+      .all();
+
+    return rows.map(mapTicketRow);
   }
 
-  getTranscript(ticketId: string): any | undefined {
-    return this.ticketsData.transcripts.find(t => t.ticketId === ticketId);
+  async getTranscript(ticketId: string): Promise<Transcript | undefined> {
+    const row = db.select().from(transcripts).where(eq(transcripts.ticketId, ticketId)).get();
+    return row ? mapTranscriptRow(row) : undefined;
   }
 
-  addTranscript(transcript: any): void {
-    this.ticketsData.transcripts.push(transcript);
-    this.saveTicketsData();
+  async addTranscript(transcript: Transcript): Promise<void> {
+    db.insert(transcripts).values({
+      ticketId: transcript.ticketId,
+      channelId: transcript.channelId,
+      userId: transcript.userId,
+      createdAt: transcript.createdAt,
+      messagesJson: JSON.stringify(transcript.messages)
+    }).onConflictDoUpdate({
+      target: transcripts.ticketId,
+      set: {
+        channelId: transcript.channelId,
+        userId: transcript.userId,
+        createdAt: transcript.createdAt,
+        messagesJson: JSON.stringify(transcript.messages)
+      }
+    }).run();
   }
 }
 
